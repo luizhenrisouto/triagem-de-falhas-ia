@@ -30,7 +30,14 @@ export function decidirVigia(execucoes, agora) {
     }
   }
   const ativasSaudaveis = execucoes.filter((r) => r.status !== "completed" && !cancelar.includes(r.id));
-  const redisparar = execucoes.length === 0 || (cancelar.length > 0 && ativasSaudaveis.length === 0);
+  // Só vale disparar de novo se a execução travada é mais nova que a última que terminou:
+  // uma travada antiga (às vezes o GitHub nem deixa cancelar) não representa trabalho faltando.
+  const ultimaConcluida = execucoes.find((r) => r.status === "completed");
+  const travadasPendentes = cancelar.filter((id) => {
+    const r = execucoes.find((x) => x.id === id);
+    return !ultimaConcluida || new Date(r.created_at) > new Date(ultimaConcluida.created_at);
+  });
+  const redisparar = execucoes.length === 0 || (travadasPendentes.length > 0 && ativasSaudaveis.length === 0);
 
   if (execucoes.length === 0) alertas.push("Nenhuma execução da triagem encontrada.");
   const concluidas = execucoes.filter((r) => r.status === "completed" && r.conclusion !== "cancelled" && r.conclusion !== "skipped");

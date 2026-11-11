@@ -96,7 +96,7 @@ npm run n8n:local        # abre o fluxo no editor do n8n em http://localhost:567
 
 ## Como foi testado
 
-- 86 testes unitários (leitura de relatórios, impressão digital da falha, chamadas às duas IAs, tratamento de recusa, JSON inválido, erro 503 e cota, decisão das issues, menções neutralizadas, métricas, histórico e as decisões do vigia)
+- 88 testes unitários (leitura de relatórios, impressão digital da falha, chamadas às duas IAs, tratamento de recusa, JSON inválido, erro 503 e cota, decisão das issues, menções neutralizadas, métricas, histórico e as decisões do vigia)
 - 8 testes de integração que sobem um n8n de verdade com servidores falsos: criar, não duplicar, reabrir, erro isolado, troca de provedor, nova tentativa por falha quando a IA está ocupada e nenhuma issue criada quando a listagem do GitHub falha
 
 ---

@@ -23,6 +23,12 @@ describe("decidirVigia", () => {
     expect(d.redisparar).toBe(true);
   });
 
+  test("presa na fila mas já existe execução concluída mais nova: tenta cancelar, não dispara outra", () => {
+    const d = decidirVigia([run(9, "completed", "success", 60), run(5, "queued", null, 200)], AGORA);
+    expect(d.cancelar).toEqual([5]);
+    expect(d.redisparar).toBe(false);
+  });
+
   test("na fila há pouco tempo: espera", () => {
     const d = decidirVigia([run(5, "queued", null, 10), run(4, "completed", "success", 120)], AGORA);
     expect(d.cancelar).toEqual([]);

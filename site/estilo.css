@@ -107,7 +107,7 @@ a:focus-visible, button:focus-visible { outline: 3px solid var(--link); outline-
   padding: 0.85rem 0.25rem;
 }
 .linha-execucao:hover .faixa { filter: saturate(1.15); }
-.quando { font-variant-numeric: tabular-nums; }
+.quando { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .resumo-linha { color: var(--tinta-suave); font-size: 0.92rem; text-align: right; white-space: nowrap; }
 
 /* Faixa: um segmento por teste, como um relatório de CI. */
