@@ -1,0 +1,249 @@
+{
+  "id": "TriagemFalhasIA1",
+  "name": "Triagem de falhas de teste com IA",
+  "nodes": [
+    {
+      "id": "c1a1e7d0-0001-4000-8000-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "webhookId": "5f0c7b2e-7a43-4d1e-9c2a-0d1a6e7f0001",
+      "parameters": { "httpMethod": "POST", "path": "triagem", "responseMode": "responseNode", "options": {} }
+    },
+    {
+      "id": "c1a1e7d0-0002-4000-8000-000000000002",
+      "name": "GitHub: listar issues",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 300],
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "url": "={{ $env.GITHUB_URL_BASE || 'https://api.github.com' }}/repos/{{ $json.body.repositorio }}/issues",
+        "sendQuery": true,
+        "queryParameters": { "parameters": [
+          { "name": "labels", "value": "triagem-ia" },
+          { "name": "state", "value": "all" },
+          { "name": "per_page", "value": "100" }
+        ] },
+        "sendHeaders": true,
+        "headerParameters": { "parameters": "{{HEADERS_GITHUB}}" },
+        "options": {}
+      }
+    },
+    {
+      "id": "c1a1e7d0-0003-4000-8000-000000000003",
+      "name": "Preparar falhas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300],
+      "parameters": { "mode": "runOnceForAllItems", "jsCode": "{{CODIGO:preparar-falhas}}" }
+    },
+    {
+      "id": "c1a1e7d0-0004-4000-8000-000000000004",
+      "name": "Claude: triar falha",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 300],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CLAUDE_URL_BASE || 'https://api.anthropic.com' }}/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [
+          { "name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}" },
+          { "name": "anthropic-version", "value": "2026-10-21" },
+          { "name": "anthropic-beta", "value": "server-side-fallback-2026-07-01" },
+          { "name": "content-type", "value": "application/json" }
+        ] },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.requisicao) }}",
+        "options": {
+          "batching": { "batch": { "batchSize": 1, "batchInterval": 0 } },
+          "response": { "response": { "fullResponse": true, "neverError": true } },
+          "timeout": 180000
+        }
+      }
+    },
+    {
+      "id": "c1a1e7d0-0005-4000-8000-000000000005",
+      "name": "Interpretar triagem",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 300],
+      "parameters": { "mode": "runOnceForAllItems", "jsCode": "{{CODIGO:interpretar-triagem}}" }
+    },
+    {
+      "id": "c1a1e7d0-0006-4000-8000-000000000006",
+      "name": "Decidir ação",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 300],
+      "parameters": { "mode": "runOnceForAllItems", "jsCode": "{{CODIGO:decidir-acao}}" }
+    },
+    {
+      "id": "c1a1e7d0-0007-4000-8000-000000000007",
+      "name": "Qual ação?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [1320, 300],
+      "parameters": { "rules": { "values": "{{REGRAS_SWITCH}}" }, "options": {} }
+    },
+    {
+      "id": "c1a1e7d0-0008-4000-8000-000000000008",
+      "name": "GitHub: criar issue",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 60],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.GITHUB_URL_BASE || 'https://api.github.com' }}/repos/{{ $json.contexto.repositorio }}/issues",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": "{{HEADERS_GITHUB}}" },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ title: $json.issue.titulo, body: $json.issue.corpo, labels: $json.issue.rotulos }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "c1a1e7d0-0009-4000-8000-000000000009",
+      "name": "GitHub: atualizar issue",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 240],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.GITHUB_URL_BASE || 'https://api.github.com' }}/repos/{{ $json.contexto.repositorio }}/issues/{{ $json.numero }}",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": "{{HEADERS_GITHUB}}" },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ body: $json.issue.corpo }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "c1a1e7d0-0010-4000-8000-000000000010",
+      "name": "GitHub: reabrir issue",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 420],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.GITHUB_URL_BASE || 'https://api.github.com' }}/repos/{{ $json.contexto.repositorio }}/issues/{{ $json.numero }}",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": "{{HEADERS_GITHUB}}" },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ state: 'open', body: $json.issue.corpo }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "c1a1e7d0-0011-4000-8000-000000000011",
+      "name": "GitHub: comentar reabertura",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1780, 420],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.GITHUB_URL_BASE || 'https://api.github.com' }}/repos/{{ $('Decidir ação').item.json.contexto.repositorio }}/issues/{{ $('Decidir ação').item.json.numero }}/comments",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": "{{HEADERS_GITHUB}}" },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ body: 'A falha voltou a ocorrer em ' + $('Decidir ação').item.json.contexto.execucao.data + ' ([execução](' + $('Decidir ação').item.json.contexto.execucao.url + ')). Issue reaberta pela triagem com IA.' }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "c1a1e7d0-0012-4000-8000-000000000012",
+      "name": "Registrar criada",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 60],
+      "parameters": { "mode": "runOnceForEachItem", "jsCode": "{{CODIGO:registrar:criada}}" }
+    },
+    {
+      "id": "c1a1e7d0-0013-4000-8000-000000000013",
+      "name": "Registrar atualizada",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 240],
+      "parameters": { "mode": "runOnceForEachItem", "jsCode": "{{CODIGO:registrar:atualizada}}" }
+    },
+    {
+      "id": "c1a1e7d0-0014-4000-8000-000000000014",
+      "name": "Registrar reaberta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 420],
+      "parameters": { "mode": "runOnceForEachItem", "jsCode": "{{CODIGO:registrar-reaberta}}" }
+    },
+    {
+      "id": "c1a1e7d0-0015-4000-8000-000000000015",
+      "name": "Registrar sem issue",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 600],
+      "parameters": { "mode": "runOnceForEachItem", "jsCode": "{{CODIGO:registrar:nenhuma}}" }
+    },
+    {
+      "id": "c1a1e7d0-0016-4000-8000-000000000016",
+      "name": "Juntar resultados",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [2220, 300],
+      "parameters": { "numberInputs": 4 }
+    },
+    {
+      "id": "c1a1e7d0-0017-4000-8000-000000000017",
+      "name": "Montar resposta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2440, 300],
+      "parameters": { "mode": "runOnceForAllItems", "jsCode": "{{CODIGO:montar-resposta}}" }
+    },
+    {
+      "id": "c1a1e7d0-0018-4000-8000-000000000018",
+      "name": "Responder",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2660, 300],
+      "parameters": { "respondWith": "firstIncomingItem", "options": {} }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "GitHub: listar issues", "type": "main", "index": 0 }]] },
+    "GitHub: listar issues": { "main": [[{ "node": "Preparar falhas", "type": "main", "index": 0 }]] },
+    "Preparar falhas": { "main": [[{ "node": "Claude: triar falha", "type": "main", "index": 0 }]] },
+    "Claude: triar falha": { "main": [[{ "node": "Interpretar triagem", "type": "main", "index": 0 }]] },
+    "Interpretar triagem": { "main": [[{ "node": "Decidir ação", "type": "main", "index": 0 }]] },
+    "Decidir ação": { "main": [[{ "node": "Qual ação?", "type": "main", "index": 0 }]] },
+    "Qual ação?": { "main": [
+      [{ "node": "GitHub: criar issue", "type": "main", "index": 0 }],
+      [{ "node": "GitHub: atualizar issue", "type": "main", "index": 0 }],
+      [{ "node": "GitHub: reabrir issue", "type": "main", "index": 0 }],
+      [{ "node": "Registrar sem issue", "type": "main", "index": 0 }]
+    ] },
+    "GitHub: criar issue": { "main": [[{ "node": "Registrar criada", "type": "main", "index": 0 }]] },
+    "GitHub: atualizar issue": { "main": [[{ "node": "Registrar atualizada", "type": "main", "index": 0 }]] },
+    "GitHub: reabrir issue": { "main": [[{ "node": "GitHub: comentar reabertura", "type": "main", "index": 0 }]] },
+    "GitHub: comentar reabertura": { "main": [[{ "node": "Registrar reaberta", "type": "main", "index": 0 }]] },
+    "Registrar criada": { "main": [[{ "node": "Juntar resultados", "type": "main", "index": 0 }]] },
+    "Registrar atualizada": { "main": [[{ "node": "Juntar resultados", "type": "main", "index": 1 }]] },
+    "Registrar reaberta": { "main": [[{ "node": "Juntar resultados", "type": "main", "index": 2 }]] },
+    "Registrar sem issue": { "main": [[{ "node": "Juntar resultados", "type": "main", "index": 3 }]] },
+    "Juntar resultados": { "main": [[{ "node": "Montar resposta", "type": "main", "index": 0 }]] },
+    "Montar resposta": { "main": [[{ "node": "Responder", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": true
+}

@@ -1,0 +1,757 @@
+{
+  "id": "TriagemFalhasIA1",
+  "name": "Triagem de falhas de teste com IA",
+  "nodes": [
+    {
+      "id": "c1a1e7d0-0001-4000-8000-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "5f0c7b2e-7a43-4d1e-9c2a-0d1a6e7f0001",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "triagem",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "c1a1e7d0-0002-4000-8000-000000000002",
+      "name": "GitHub: listar issues",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        300
+      ],
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "url": "={{ $env.GITHUB_URL_BASE || 'https://api.github.com' }}/repos/{{ $json.body.repositorio }}/issues",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "labels",
+              "value": "triagem-ia"
+            },
+            {
+              "name": "state",
+              "value": "all"
+            },
+            {
+              "name": "per_page",
+              "value": "100"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.GITHUB_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            },
+            {
+              "name": "User-Agent",
+              "value": "triagem-de-falhas-ia"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "c1a1e7d0-0003-4000-8000-000000000003",
+      "name": "Preparar falhas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// ---- n8n/codigo/precos.js ----\n// Preço por milhão de tokens (US$), entrada e saída. Fonte: tabela de preços da Anthropic (nov/2026).\nconst PRECOS_POR_MILHAO = {\n  \"claude-opus-5-5\": { entrada: 4, saida: 20 },\n  \"claude-haiku-5-5\": { entrada: 0.1, saida: 0.5 },\n};\n\nfunction custoUsd(modelo, tokensEntrada, tokensSaida) {\n  const p = PRECOS_POR_MILHAO[modelo];\n  if (!p) return null;\n  return (tokensEntrada * p.entrada + tokensSaida * p.saida) / 1e6;\n}\n\nif (typeof module !== \"undefined\") module.exports = { custoUsd, PRECOS_POR_MILHAO };\n\n// ---- n8n/codigo/montar-requisicao-claude.js ----\nconst CATEGORIAS = [\"bug_produto\", \"teste_instavel\", \"teste_quebrado\"];\n\n// Modelos com fallback no servidor (beta server-side-fallback-2026-07-01). O Haiku 5.5 não tem.\nconst MODELOS_COM_FALLBACK = [\"claude-opus-5-5\", \"claude-sonnet-5-5\", \"claude-fable-5-2\"];\n\nconst ESQUEMA_TRIAGEM = {\n  type: \"object\",\n  properties: {\n    categoria: { type: \"string\", enum: CATEGORIAS },\n    confianca: { type: \"number\" },\n    resumo: { type: \"string\" },\n    passos: { type: \"array\", items: { type: \"string\" } },\n    esperado: { type: \"string\" },\n    obtido: { type: \"string\" },\n    causaProvavel: { type: \"string\" },\n    sugestaoCorrecao: { type: \"string\" },\n  },\n  required: [\"categoria\", \"confianca\", \"resumo\", \"passos\", \"esperado\", \"obtido\", \"causaProvavel\", \"sugestaoCorrecao\"],\n  additionalProperties: false,\n};\n\nfunction textoDaFalha(falha) {\n  return [\n    `Teste: ${falha.titulo}`,\n    `Arquivo: ${falha.arquivo}${falha.linha ? `, linha ${falha.linha}` : \"\"}`,\n    `Tentativas: ${falha.tentativas}`,\n    `Passou numa nova tentativa: ${falha.passouNaNovaTentativa ? \"sim\" : \"não\"}`,\n    `Duração total: ${falha.duracaoMs} ms`,\n    \"\",\n    \"Mensagem de erro:\",\n    falha.erro,\n    \"\",\n    \"Stack:\",\n    falha.stack || \"(sem stack)\",\n    \"\",\n    \"Trecho do código do teste:\",\n    falha.trechoCodigo || \"(código não disponível)\",\n    \"\",\n    falha.printBase64 ? \"O print da tela no momento da falha está anexado acima.\" : \"Não há print desta falha.\",\n  ].join(\"\\n\");\n}\n\n/** Corpo do POST /v1/messages para triar uma falha. */\nfunction montarRequisicaoClaude(falha, { promptSistema, modelo }) {\n  const conteudo = [];\n  if (falha.printBase64) {\n    conteudo.push({ type: \"image\", source: { type: \"base64\", media_type: \"image/png\", data: falha.printBase64 } });\n  }\n  conteudo.push({ type: \"text\", text: textoDaFalha(falha) });\n  const corpo = {\n    model: modelo,\n    max_tokens: 2000,\n    system: promptSistema,\n    output_config: { effort: \"low\", format: { type: \"json_schema\", schema: ESQUEMA_TRIAGEM } },\n    messages: [{ role: \"user\", content: conteudo }],\n  };\n  if (MODELOS_COM_FALLBACK.includes(modelo)) corpo.fallbacks = \"default\";\n  return corpo;\n}\n\nif (typeof module !== \"undefined\") module.exports = { montarRequisicaoClaude, ESQUEMA_TRIAGEM, CATEGORIAS };\n\n// ---- n8n/codigo/interpretar-resposta-claude.js ----\n// No n8n, precos.js é concatenado antes deste arquivo; nos testes, vem por require.\nfunction _custo(modelo, entrada, saida) {\n  const fn = typeof custoUsd === \"function\" ? custoUsd : require(\"./precos.js\").custoUsd;\n  return fn(modelo, entrada, saida);\n}\n\nconst CATEGORIAS_VALIDAS = [\"bug_produto\", \"teste_instavel\", \"teste_quebrado\"];\n\n/**\n * Converte a resposta da API (ou o erro HTTP) num resultado de triagem.\n * Nunca lança: qualquer problema vira `erroTriagem`, para a execução seguir com as outras falhas.\n */\nfunction interpretarRespostaClaude(respostaHttp, { modelo, inicioMs, fimMs }) {\n  const r = respostaHttp || {};\n  const tokensEntrada = r.usage?.input_tokens ?? 0;\n  const tokensSaida = r.usage?.output_tokens ?? 0;\n  const base = {\n    triagem: null,\n    erroTriagem: null,\n    tokensEntrada,\n    tokensSaida,\n    custoUsd: _custo(modelo, tokensEntrada, tokensSaida) ?? 0,\n    duracaoTriagemMs: fimMs - inicioMs,\n  };\n  const falhou = (motivo) => ({ ...base, erroTriagem: motivo });\n\n  if (r.error || (r.statusCode && r.statusCode >= 400)) {\n    const tipo = r.error?.type ?? \"erro\";\n    const msg = r.error?.message ?? \"\";\n    return falhou(`Erro da API (HTTP ${r.statusCode ?? \"?\"}): ${tipo}${msg ? ` - ${msg}` : \"\"}`);\n  }\n  if (r.stop_reason === \"refusal\") return falhou(\"A IA recusou a triagem desta falha.\");\n  if (r.stop_reason === \"max_tokens\") return falhou(\"Resposta cortada no limite de tokens.\");\n\n  const texto = (r.content || []).find((b) => b.type === \"text\")?.text;\n  let triagem;\n  try {\n    triagem = JSON.parse(texto);\n  } catch {\n    return falhou(\"A IA devolveu um JSON inválido.\");\n  }\n  if (!triagem || !CATEGORIAS_VALIDAS.includes(triagem.categoria)) {\n    return falhou(`A IA devolveu uma categoria inválida: ${triagem?.categoria}`);\n  }\n  return { ...base, triagem };\n}\n\nif (typeof module !== \"undefined\") module.exports = { interpretarRespostaClaude };\n\n// ---- n8n/codigo/decidir-acao-issue.js ----\n/**\n * Decide o que fazer com a issue de uma falha triada.\n * `issuesExistentes`: issues do repositório com o rótulo triagem-ia (abertas e fechadas).\n */\nfunction decidirAcaoIssue(falha, triagem, issuesExistentes) {\n  if (!triagem || triagem.categoria === \"teste_instavel\") return { acao: \"nenhuma\", numero: null };\n  const marcador = `<!-- triagem-ia:fp=${falha.id} -->`;\n  const mesmas = (issuesExistentes || []).filter((i) => (i.body || \"\").includes(marcador));\n  const aberta = mesmas.find((i) => i.state === \"open\");\n  if (aberta) return { acao: \"atualizar\", numero: aberta.number };\n  if (mesmas.length > 0) return { acao: \"reabrir\", numero: mesmas[0].number };\n  return { acao: \"criar\", numero: null };\n}\n\nif (typeof module !== \"undefined\") module.exports = { decidirAcaoIssue };\n\n// ---- n8n/codigo/renderizar-issue.js ----\nfunction lerOcorrencias(corpo) {\n  const m = (corpo || \"\").match(/<!-- triagem-ia:ocorrencias=(\\d+) -->/);\n  return m ? Number(m[1]) : 0;\n}\n\nconst NOME_CATEGORIA = {\n  bug_produto: \"Bug do produto\",\n  teste_quebrado: \"Teste quebrado\",\n  teste_instavel: \"Teste instável\",\n};\n\n/** Título, corpo (Markdown) e rótulos da issue. `ocorrenciasAnteriores` = contador lido da issue existente (0 se nova). */\nfunction renderizarIssue(falha, triagem, execucao, ocorrenciasAnteriores) {\n  const ocorrencias = (ocorrenciasAnteriores || 0) + 1;\n  const quebrado = triagem.categoria === \"teste_quebrado\";\n  const corpo = [\n    `**${NOME_CATEGORIA[triagem.categoria]}** · confiança da IA: ${Math.round(triagem.confianca * 100)}%`,\n    \"\",\n    `**Teste:** \\`${falha.titulo}\\``,\n    \"\",\n    \"### Passos para reproduzir\",\n    ...triagem.passos.map((p, i) => `${i + 1}. ${p}`),\n    \"\",\n    \"### Esperado\",\n    triagem.esperado,\n    \"\",\n    \"### Obtido\",\n    triagem.obtido,\n    \"\",\n    \"### Causa provável\",\n    triagem.causaProvavel,\n    \"\",\n    quebrado ? \"### Correção sugerida para o teste\" : \"### Sugestão\",\n    triagem.sugestaoCorrecao,\n    \"\",\n    \"---\",\n    `Ocorrências: ${ocorrencias} · Última ocorrência: ${execucao.data} ([execução ${execucao.id}](${execucao.url}), print e trace nos artefatos)`,\n    \"\",\n    \"> Issue aberta automaticamente pela triagem com IA. Esta falha foi plantada de propósito na demonstração (SauceDemo); o gabarito está em `testes/gabarito.json`.\",\n    \"\",\n    `<!-- triagem-ia:fp=${falha.id} -->`,\n    `<!-- triagem-ia:ocorrencias=${ocorrencias} -->`,\n  ].join(\"\\n\");\n  return { titulo: `[SauceDemo] ${triagem.resumo}`, corpo, rotulos: [\"triagem-ia\", triagem.categoria] };\n}\n\nif (typeof module !== \"undefined\") module.exports = { renderizarIssue, lerOcorrencias };\n\n// ---- n8n/codigo/montar-resultado.js ----\n/**\n * Resultado final de uma falha, devolvido pelo webhook.\n * `decisao`: item do nó \"Decidir ação\"; `acaoRealizada`: criada | atualizada | reaberta | nenhuma;\n * `respostaGithub`: corpo da resposta do GitHub (ou null quando não houve chamada).\n */\nfunction montarResultado(decisao, acaoRealizada, respostaGithub) {\n  let acaoIssue = acaoRealizada;\n  let issueUrl = null;\n  let erroIssue = null;\n  if (acaoRealizada !== \"nenhuma\") {\n    if (respostaGithub && respostaGithub.html_url) {\n      issueUrl = respostaGithub.html_url;\n    } else {\n      acaoIssue = \"nenhuma\";\n      erroIssue = `Falha ao ${acaoRealizada === \"criada\" ? \"criar\" : \"alterar\"} a issue: ${\n        respostaGithub?.error?.message ?? respostaGithub?.message ?? \"resposta sem link\"\n      }`;\n    }\n  }\n  return {\n    falhaId: decisao.falha.id,\n    titulo: decisao.falha.titulo,\n    triagem: decisao.triagem,\n    erroTriagem: decisao.erroTriagem,\n    acaoIssue,\n    issueUrl,\n    erroIssue,\n    tokensEntrada: decisao.tokensEntrada,\n    tokensSaida: decisao.tokensSaida,\n    custoUsd: decisao.custoUsd,\n    duracaoTriagemMs: decisao.duracaoTriagemMs,\n  };\n}\n\nif (typeof module !== \"undefined\") module.exports = { montarResultado };\n\n// ---- nó: Preparar falhas ----\n// Nó \"Preparar falhas\" (uma vez para todos os itens).\n// Entrada: corpo do webhook + issues existentes. Saída: um item por falha, com a requisição pronta para o Claude.\nconst corpo = $(\"Webhook\").first().json.body;\nconst issuesExistentes = $(\"GitHub: listar issues\")\n  .all()\n  .map((i) => i.json)\n  .filter((i) => i && typeof i.number === \"number\");\nconst contexto = {\n  execucao: corpo.execucao,\n  repositorio: corpo.repositorio,\n  modelo: corpo.modelo,\n};\nconst inicioMs = Date.now();\nreturn (corpo.falhas || []).map((falha) => ({\n  json: {\n    falha: { ...falha, printBase64: null },\n    contexto,\n    issuesExistentes,\n    inicioMs,\n    requisicao: montarRequisicaoClaude(falha, { promptSistema: corpo.promptSistema, modelo: corpo.modelo }),\n  },\n}));\n"
+      }
+    },
+    {
+      "id": "c1a1e7d0-0004-4000-8000-000000000004",
+      "name": "Claude: triar falha",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CLAUDE_URL_BASE || 'https://api.anthropic.com' }}/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2026-10-21"
+            },
+            {
+              "name": "anthropic-beta",
+              "value": "server-side-fallback-2026-07-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.requisicao) }}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 0
+            }
+          },
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          },
+          "timeout": 180000
+        }
+      }
+    },
+    {
+      "id": "c1a1e7d0-0005-4000-8000-000000000005",
+      "name": "Interpretar triagem",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// ---- n8n/codigo/precos.js ----\n// Preço por milhão de tokens (US$), entrada e saída. Fonte: tabela de preços da Anthropic (nov/2026).\nconst PRECOS_POR_MILHAO = {\n  \"claude-opus-5-5\": { entrada: 4, saida: 20 },\n  \"claude-haiku-5-5\": { entrada: 0.1, saida: 0.5 },\n};\n\nfunction custoUsd(modelo, tokensEntrada, tokensSaida) {\n  const p = PRECOS_POR_MILHAO[modelo];\n  if (!p) return null;\n  return (tokensEntrada * p.entrada + tokensSaida * p.saida) / 1e6;\n}\n\nif (typeof module !== \"undefined\") module.exports = { custoUsd, PRECOS_POR_MILHAO };\n\n// ---- n8n/codigo/montar-requisicao-claude.js ----\nconst CATEGORIAS = [\"bug_produto\", \"teste_instavel\", \"teste_quebrado\"];\n\n// Modelos com fallback no servidor (beta server-side-fallback-2026-07-01). O Haiku 5.5 não tem.\nconst MODELOS_COM_FALLBACK = [\"claude-opus-5-5\", \"claude-sonnet-5-5\", \"claude-fable-5-2\"];\n\nconst ESQUEMA_TRIAGEM = {\n  type: \"object\",\n  properties: {\n    categoria: { type: \"string\", enum: CATEGORIAS },\n    confianca: { type: \"number\" },\n    resumo: { type: \"string\" },\n    passos: { type: \"array\", items: { type: \"string\" } },\n    esperado: { type: \"string\" },\n    obtido: { type: \"string\" },\n    causaProvavel: { type: \"string\" },\n    sugestaoCorrecao: { type: \"string\" },\n  },\n  required: [\"categoria\", \"confianca\", \"resumo\", \"passos\", \"esperado\", \"obtido\", \"causaProvavel\", \"sugestaoCorrecao\"],\n  additionalProperties: false,\n};\n\nfunction textoDaFalha(falha) {\n  return [\n    `Teste: ${falha.titulo}`,\n    `Arquivo: ${falha.arquivo}${falha.linha ? `, linha ${falha.linha}` : \"\"}`,\n    `Tentativas: ${falha.tentativas}`,\n    `Passou numa nova tentativa: ${falha.passouNaNovaTentativa ? \"sim\" : \"não\"}`,\n    `Duração total: ${falha.duracaoMs} ms`,\n    \"\",\n    \"Mensagem de erro:\",\n    falha.erro,\n    \"\",\n    \"Stack:\",\n    falha.stack || \"(sem stack)\",\n    \"\",\n    \"Trecho do código do teste:\",\n    falha.trechoCodigo || \"(código não disponível)\",\n    \"\",\n    falha.printBase64 ? \"O print da tela no momento da falha está anexado acima.\" : \"Não há print desta falha.\",\n  ].join(\"\\n\");\n}\n\n/** Corpo do POST /v1/messages para triar uma falha. */\nfunction montarRequisicaoClaude(falha, { promptSistema, modelo }) {\n  const conteudo = [];\n  if (falha.printBase64) {\n    conteudo.push({ type: \"image\", source: { type: \"base64\", media_type: \"image/png\", data: falha.printBase64 } });\n  }\n  conteudo.push({ type: \"text\", text: textoDaFalha(falha) });\n  const corpo = {\n    model: modelo,\n    max_tokens: 2000,\n    system: promptSistema,\n    output_config: { effort: \"low\", format: { type: \"json_schema\", schema: ESQUEMA_TRIAGEM } },\n    messages: [{ role: \"user\", content: conteudo }],\n  };\n  if (MODELOS_COM_FALLBACK.includes(modelo)) corpo.fallbacks = \"default\";\n  return corpo;\n}\n\nif (typeof module !== \"undefined\") module.exports = { montarRequisicaoClaude, ESQUEMA_TRIAGEM, CATEGORIAS };\n\n// ---- n8n/codigo/interpretar-resposta-claude.js ----\n// No n8n, precos.js é concatenado antes deste arquivo; nos testes, vem por require.\nfunction _custo(modelo, entrada, saida) {\n  const fn = typeof custoUsd === \"function\" ? custoUsd : require(\"./precos.js\").custoUsd;\n  return fn(modelo, entrada, saida);\n}\n\nconst CATEGORIAS_VALIDAS = [\"bug_produto\", \"teste_instavel\", \"teste_quebrado\"];\n\n/**\n * Converte a resposta da API (ou o erro HTTP) num resultado de triagem.\n * Nunca lança: qualquer problema vira `erroTriagem`, para a execução seguir com as outras falhas.\n */\nfunction interpretarRespostaClaude(respostaHttp, { modelo, inicioMs, fimMs }) {\n  const r = respostaHttp || {};\n  const tokensEntrada = r.usage?.input_tokens ?? 0;\n  const tokensSaida = r.usage?.output_tokens ?? 0;\n  const base = {\n    triagem: null,\n    erroTriagem: null,\n    tokensEntrada,\n    tokensSaida,\n    custoUsd: _custo(modelo, tokensEntrada, tokensSaida) ?? 0,\n    duracaoTriagemMs: fimMs - inicioMs,\n  };\n  const falhou = (motivo) => ({ ...base, erroTriagem: motivo });\n\n  if (r.error || (r.statusCode && r.statusCode >= 400)) {\n    const tipo = r.error?.type ?? \"erro\";\n    const msg = r.error?.message ?? \"\";\n    return falhou(`Erro da API (HTTP ${r.statusCode ?? \"?\"}): ${tipo}${msg ? ` - ${msg}` : \"\"}`);\n  }\n  if (r.stop_reason === \"refusal\") return falhou(\"A IA recusou a triagem desta falha.\");\n  if (r.stop_reason === \"max_tokens\") return falhou(\"Resposta cortada no limite de tokens.\");\n\n  const texto = (r.content || []).find((b) => b.type === \"text\")?.text;\n  let triagem;\n  try {\n    triagem = JSON.parse(texto);\n  } catch {\n    return falhou(\"A IA devolveu um JSON inválido.\");\n  }\n  if (!triagem || !CATEGORIAS_VALIDAS.includes(triagem.categoria)) {\n    return falhou(`A IA devolveu uma categoria inválida: ${triagem?.categoria}`);\n  }\n  return { ...base, triagem };\n}\n\nif (typeof module !== \"undefined\") module.exports = { interpretarRespostaClaude };\n\n// ---- n8n/codigo/decidir-acao-issue.js ----\n/**\n * Decide o que fazer com a issue de uma falha triada.\n * `issuesExistentes`: issues do repositório com o rótulo triagem-ia (abertas e fechadas).\n */\nfunction decidirAcaoIssue(falha, triagem, issuesExistentes) {\n  if (!triagem || triagem.categoria === \"teste_instavel\") return { acao: \"nenhuma\", numero: null };\n  const marcador = `<!-- triagem-ia:fp=${falha.id} -->`;\n  const mesmas = (issuesExistentes || []).filter((i) => (i.body || \"\").includes(marcador));\n  const aberta = mesmas.find((i) => i.state === \"open\");\n  if (aberta) return { acao: \"atualizar\", numero: aberta.number };\n  if (mesmas.length > 0) return { acao: \"reabrir\", numero: mesmas[0].number };\n  return { acao: \"criar\", numero: null };\n}\n\nif (typeof module !== \"undefined\") module.exports = { decidirAcaoIssue };\n\n// ---- n8n/codigo/renderizar-issue.js ----\nfunction lerOcorrencias(corpo) {\n  const m = (corpo || \"\").match(/<!-- triagem-ia:ocorrencias=(\\d+) -->/);\n  return m ? Number(m[1]) : 0;\n}\n\nconst NOME_CATEGORIA = {\n  bug_produto: \"Bug do produto\",\n  teste_quebrado: \"Teste quebrado\",\n  teste_instavel: \"Teste instável\",\n};\n\n/** Título, corpo (Markdown) e rótulos da issue. `ocorrenciasAnteriores` = contador lido da issue existente (0 se nova). */\nfunction renderizarIssue(falha, triagem, execucao, ocorrenciasAnteriores) {\n  const ocorrencias = (ocorrenciasAnteriores || 0) + 1;\n  const quebrado = triagem.categoria === \"teste_quebrado\";\n  const corpo = [\n    `**${NOME_CATEGORIA[triagem.categoria]}** · confiança da IA: ${Math.round(triagem.confianca * 100)}%`,\n    \"\",\n    `**Teste:** \\`${falha.titulo}\\``,\n    \"\",\n    \"### Passos para reproduzir\",\n    ...triagem.passos.map((p, i) => `${i + 1}. ${p}`),\n    \"\",\n    \"### Esperado\",\n    triagem.esperado,\n    \"\",\n    \"### Obtido\",\n    triagem.obtido,\n    \"\",\n    \"### Causa provável\",\n    triagem.causaProvavel,\n    \"\",\n    quebrado ? \"### Correção sugerida para o teste\" : \"### Sugestão\",\n    triagem.sugestaoCorrecao,\n    \"\",\n    \"---\",\n    `Ocorrências: ${ocorrencias} · Última ocorrência: ${execucao.data} ([execução ${execucao.id}](${execucao.url}), print e trace nos artefatos)`,\n    \"\",\n    \"> Issue aberta automaticamente pela triagem com IA. Esta falha foi plantada de propósito na demonstração (SauceDemo); o gabarito está em `testes/gabarito.json`.\",\n    \"\",\n    `<!-- triagem-ia:fp=${falha.id} -->`,\n    `<!-- triagem-ia:ocorrencias=${ocorrencias} -->`,\n  ].join(\"\\n\");\n  return { titulo: `[SauceDemo] ${triagem.resumo}`, corpo, rotulos: [\"triagem-ia\", triagem.categoria] };\n}\n\nif (typeof module !== \"undefined\") module.exports = { renderizarIssue, lerOcorrencias };\n\n// ---- n8n/codigo/montar-resultado.js ----\n/**\n * Resultado final de uma falha, devolvido pelo webhook.\n * `decisao`: item do nó \"Decidir ação\"; `acaoRealizada`: criada | atualizada | reaberta | nenhuma;\n * `respostaGithub`: corpo da resposta do GitHub (ou null quando não houve chamada).\n */\nfunction montarResultado(decisao, acaoRealizada, respostaGithub) {\n  let acaoIssue = acaoRealizada;\n  let issueUrl = null;\n  let erroIssue = null;\n  if (acaoRealizada !== \"nenhuma\") {\n    if (respostaGithub && respostaGithub.html_url) {\n      issueUrl = respostaGithub.html_url;\n    } else {\n      acaoIssue = \"nenhuma\";\n      erroIssue = `Falha ao ${acaoRealizada === \"criada\" ? \"criar\" : \"alterar\"} a issue: ${\n        respostaGithub?.error?.message ?? respostaGithub?.message ?? \"resposta sem link\"\n      }`;\n    }\n  }\n  return {\n    falhaId: decisao.falha.id,\n    titulo: decisao.falha.titulo,\n    triagem: decisao.triagem,\n    erroTriagem: decisao.erroTriagem,\n    acaoIssue,\n    issueUrl,\n    erroIssue,\n    tokensEntrada: decisao.tokensEntrada,\n    tokensSaida: decisao.tokensSaida,\n    custoUsd: decisao.custoUsd,\n    duracaoTriagemMs: decisao.duracaoTriagemMs,\n  };\n}\n\nif (typeof module !== \"undefined\") module.exports = { montarResultado };\n\n// ---- nó: Interpretar triagem ----\n// Nó \"Interpretar triagem\" (uma vez para todos os itens).\n// O n8n chama o Claude falha por falha; o tempo de triagem é a média do nó inteiro por falha.\nconst preparados = $(\"Preparar falhas\").all();\nconst respostas = $input.all();\nconst fimMs = Date.now();\nconst n = Math.max(preparados.length, 1);\nreturn preparados.map((p, i) => {\n  const http = respostas[i]?.json ?? {};\n  const resposta = http.body !== undefined ? { ...http.body, statusCode: http.statusCode } : http;\n  const { modelo } = p.json.contexto;\n  const inicioMedio = fimMs - (fimMs - p.json.inicioMs) / n;\n  const interpretacao = interpretarRespostaClaude(resposta, { modelo, inicioMs: Math.round(inicioMedio), fimMs });\n  return { json: { falha: p.json.falha, contexto: p.json.contexto, issuesExistentes: p.json.issuesExistentes, ...interpretacao } };\n});\n"
+      }
+    },
+    {
+      "id": "c1a1e7d0-0006-4000-8000-000000000006",
+      "name": "Decidir ação",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// ---- n8n/codigo/precos.js ----\n// Preço por milhão de tokens (US$), entrada e saída. Fonte: tabela de preços da Anthropic (nov/2026).\nconst PRECOS_POR_MILHAO = {\n  \"claude-opus-5-5\": { entrada: 4, saida: 20 },\n  \"claude-haiku-5-5\": { entrada: 0.1, saida: 0.5 },\n};\n\nfunction custoUsd(modelo, tokensEntrada, tokensSaida) {\n  const p = PRECOS_POR_MILHAO[modelo];\n  if (!p) return null;\n  return (tokensEntrada * p.entrada + tokensSaida * p.saida) / 1e6;\n}\n\nif (typeof module !== \"undefined\") module.exports = { custoUsd, PRECOS_POR_MILHAO };\n\n// ---- n8n/codigo/montar-requisicao-claude.js ----\nconst CATEGORIAS = [\"bug_produto\", \"teste_instavel\", \"teste_quebrado\"];\n\n// Modelos com fallback no servidor (beta server-side-fallback-2026-07-01). O Haiku 5.5 não tem.\nconst MODELOS_COM_FALLBACK = [\"claude-opus-5-5\", \"claude-sonnet-5-5\", \"claude-fable-5-2\"];\n\nconst ESQUEMA_TRIAGEM = {\n  type: \"object\",\n  properties: {\n    categoria: { type: \"string\", enum: CATEGORIAS },\n    confianca: { type: \"number\" },\n    resumo: { type: \"string\" },\n    passos: { type: \"array\", items: { type: \"string\" } },\n    esperado: { type: \"string\" },\n    obtido: { type: \"string\" },\n    causaProvavel: { type: \"string\" },\n    sugestaoCorrecao: { type: \"string\" },\n  },\n  required: [\"categoria\", \"confianca\", \"resumo\", \"passos\", \"esperado\", \"obtido\", \"causaProvavel\", \"sugestaoCorrecao\"],\n  additionalProperties: false,\n};\n\nfunction textoDaFalha(falha) {\n  return [\n    `Teste: ${falha.titulo}`,\n    `Arquivo: ${falha.arquivo}${falha.linha ? `, linha ${falha.linha}` : \"\"}`,\n    `Tentativas: ${falha.tentativas}`,\n    `Passou numa nova tentativa: ${falha.passouNaNovaTentativa ? \"sim\" : \"não\"}`,\n    `Duração total: ${falha.duracaoMs} ms`,\n    \"\",\n    \"Mensagem de erro:\",\n    falha.erro,\n    \"\",\n    \"Stack:\",\n    falha.stack || \"(sem stack)\",\n    \"\",\n    \"Trecho do código do teste:\",\n    falha.trechoCodigo || \"(código não disponível)\",\n    \"\",\n    falha.printBase64 ? \"O print da tela no momento da falha está anexado acima.\" : \"Não há print desta falha.\",\n  ].join(\"\\n\");\n}\n\n/** Corpo do POST /v1/messages para triar uma falha. */\nfunction montarRequisicaoClaude(falha, { promptSistema, modelo }) {\n  const conteudo = [];\n  if (falha.printBase64) {\n    conteudo.push({ type: \"image\", source: { type: \"base64\", media_type: \"image/png\", data: falha.printBase64 } });\n  }\n  conteudo.push({ type: \"text\", text: textoDaFalha(falha) });\n  const corpo = {\n    model: modelo,\n    max_tokens: 2000,\n    system: promptSistema,\n    output_config: { effort: \"low\", format: { type: \"json_schema\", schema: ESQUEMA_TRIAGEM } },\n    messages: [{ role: \"user\", content: conteudo }],\n  };\n  if (MODELOS_COM_FALLBACK.includes(modelo)) corpo.fallbacks = \"default\";\n  return corpo;\n}\n\nif (typeof module !== \"undefined\") module.exports = { montarRequisicaoClaude, ESQUEMA_TRIAGEM, CATEGORIAS };\n\n// ---- n8n/codigo/interpretar-resposta-claude.js ----\n// No n8n, precos.js é concatenado antes deste arquivo; nos testes, vem por require.\nfunction _custo(modelo, entrada, saida) {\n  const fn = typeof custoUsd === \"function\" ? custoUsd : require(\"./precos.js\").custoUsd;\n  return fn(modelo, entrada, saida);\n}\n\nconst CATEGORIAS_VALIDAS = [\"bug_produto\", \"teste_instavel\", \"teste_quebrado\"];\n\n/**\n * Converte a resposta da API (ou o erro HTTP) num resultado de triagem.\n * Nunca lança: qualquer problema vira `erroTriagem`, para a execução seguir com as outras falhas.\n */\nfunction interpretarRespostaClaude(respostaHttp, { modelo, inicioMs, fimMs }) {\n  const r = respostaHttp || {};\n  const tokensEntrada = r.usage?.input_tokens ?? 0;\n  const tokensSaida = r.usage?.output_tokens ?? 0;\n  const base = {\n    triagem: null,\n    erroTriagem: null,\n    tokensEntrada,\n    tokensSaida,\n    custoUsd: _custo(modelo, tokensEntrada, tokensSaida) ?? 0,\n    duracaoTriagemMs: fimMs - inicioMs,\n  };\n  const falhou = (motivo) => ({ ...base, erroTriagem: motivo });\n\n  if (r.error || (r.statusCode && r.statusCode >= 400)) {\n    const tipo = r.error?.type ?? \"erro\";\n    const msg = r.error?.message ?? \"\";\n    return falhou(`Erro da API (HTTP ${r.statusCode ?? \"?\"}): ${tipo}${msg ? ` - ${msg}` : \"\"}`);\n  }\n  if (r.stop_reason === \"refusal\") return falhou(\"A IA recusou a triagem desta falha.\");\n  if (r.stop_reason === \"max_tokens\") return falhou(\"Resposta cortada no limite de tokens.\");\n\n  const texto = (r.content || []).find((b) => b.type === \"text\")?.text;\n  let triagem;\n  try {\n    triagem = JSON.parse(texto);\n  } catch {\n    return falhou(\"A IA devolveu um JSON inválido.\");\n  }\n  if (!triagem || !CATEGORIAS_VALIDAS.includes(triagem.categoria)) {\n    return falhou(`A IA devolveu uma categoria inválida: ${triagem?.categoria}`);\n  }\n  return { ...base, triagem };\n}\n\nif (typeof module !== \"undefined\") module.exports = { interpretarRespostaClaude };\n\n// ---- n8n/codigo/decidir-acao-issue.js ----\n/**\n * Decide o que fazer com a issue de uma falha triada.\n * `issuesExistentes`: issues do repositório com o rótulo triagem-ia (abertas e fechadas).\n */\nfunction decidirAcaoIssue(falha, triagem, issuesExistentes) {\n  if (!triagem || triagem.categoria === \"teste_instavel\") return { acao: \"nenhuma\", numero: null };\n  const marcador = `<!-- triagem-ia:fp=${falha.id} -->`;\n  const mesmas = (issuesExistentes || []).filter((i) => (i.body || \"\").includes(marcador));\n  const aberta = mesmas.find((i) => i.state === \"open\");\n  if (aberta) return { acao: \"atualizar\", numero: aberta.number };\n  if (mesmas.length > 0) return { acao: \"reabrir\", numero: mesmas[0].number };\n  return { acao: \"criar\", numero: null };\n}\n\nif (typeof module !== \"undefined\") module.exports = { decidirAcaoIssue };\n\n// ---- n8n/codigo/renderizar-issue.js ----\nfunction lerOcorrencias(corpo) {\n  const m = (corpo || \"\").match(/<!-- triagem-ia:ocorrencias=(\\d+) -->/);\n  return m ? Number(m[1]) : 0;\n}\n\nconst NOME_CATEGORIA = {\n  bug_produto: \"Bug do produto\",\n  teste_quebrado: \"Teste quebrado\",\n  teste_instavel: \"Teste instável\",\n};\n\n/** Título, corpo (Markdown) e rótulos da issue. `ocorrenciasAnteriores` = contador lido da issue existente (0 se nova). */\nfunction renderizarIssue(falha, triagem, execucao, ocorrenciasAnteriores) {\n  const ocorrencias = (ocorrenciasAnteriores || 0) + 1;\n  const quebrado = triagem.categoria === \"teste_quebrado\";\n  const corpo = [\n    `**${NOME_CATEGORIA[triagem.categoria]}** · confiança da IA: ${Math.round(triagem.confianca * 100)}%`,\n    \"\",\n    `**Teste:** \\`${falha.titulo}\\``,\n    \"\",\n    \"### Passos para reproduzir\",\n    ...triagem.passos.map((p, i) => `${i + 1}. ${p}`),\n    \"\",\n    \"### Esperado\",\n    triagem.esperado,\n    \"\",\n    \"### Obtido\",\n    triagem.obtido,\n    \"\",\n    \"### Causa provável\",\n    triagem.causaProvavel,\n    \"\",\n    quebrado ? \"### Correção sugerida para o teste\" : \"### Sugestão\",\n    triagem.sugestaoCorrecao,\n    \"\",\n    \"---\",\n    `Ocorrências: ${ocorrencias} · Última ocorrência: ${execucao.data} ([execução ${execucao.id}](${execucao.url}), print e trace nos artefatos)`,\n    \"\",\n    \"> Issue aberta automaticamente pela triagem com IA. Esta falha foi plantada de propósito na demonstração (SauceDemo); o gabarito está em `testes/gabarito.json`.\",\n    \"\",\n    `<!-- triagem-ia:fp=${falha.id} -->`,\n    `<!-- triagem-ia:ocorrencias=${ocorrencias} -->`,\n  ].join(\"\\n\");\n  return { titulo: `[SauceDemo] ${triagem.resumo}`, corpo, rotulos: [\"triagem-ia\", triagem.categoria] };\n}\n\nif (typeof module !== \"undefined\") module.exports = { renderizarIssue, lerOcorrencias };\n\n// ---- n8n/codigo/montar-resultado.js ----\n/**\n * Resultado final de uma falha, devolvido pelo webhook.\n * `decisao`: item do nó \"Decidir ação\"; `acaoRealizada`: criada | atualizada | reaberta | nenhuma;\n * `respostaGithub`: corpo da resposta do GitHub (ou null quando não houve chamada).\n */\nfunction montarResultado(decisao, acaoRealizada, respostaGithub) {\n  let acaoIssue = acaoRealizada;\n  let issueUrl = null;\n  let erroIssue = null;\n  if (acaoRealizada !== \"nenhuma\") {\n    if (respostaGithub && respostaGithub.html_url) {\n      issueUrl = respostaGithub.html_url;\n    } else {\n      acaoIssue = \"nenhuma\";\n      erroIssue = `Falha ao ${acaoRealizada === \"criada\" ? \"criar\" : \"alterar\"} a issue: ${\n        respostaGithub?.error?.message ?? respostaGithub?.message ?? \"resposta sem link\"\n      }`;\n    }\n  }\n  return {\n    falhaId: decisao.falha.id,\n    titulo: decisao.falha.titulo,\n    triagem: decisao.triagem,\n    erroTriagem: decisao.erroTriagem,\n    acaoIssue,\n    issueUrl,\n    erroIssue,\n    tokensEntrada: decisao.tokensEntrada,\n    tokensSaida: decisao.tokensSaida,\n    custoUsd: decisao.custoUsd,\n    duracaoTriagemMs: decisao.duracaoTriagemMs,\n  };\n}\n\nif (typeof module !== \"undefined\") module.exports = { montarResultado };\n\n// ---- nó: Decidir ação ----\n// Nó \"Decidir ação\" (uma vez para todos os itens): criar, atualizar, reabrir ou nenhuma.\nreturn $input.all().map((item) => {\n  const d = item.json;\n  const { acao, numero } = decidirAcaoIssue(d.falha, d.triagem, d.issuesExistentes);\n  let issue = null;\n  if (acao !== \"nenhuma\") {\n    const existente = d.issuesExistentes.find((i) => i.number === numero);\n    issue = renderizarIssue(d.falha, d.triagem, d.contexto.execucao, lerOcorrencias(existente?.body));\n  }\n  const { issuesExistentes, ...resto } = d;\n  return { json: { ...resto, acao, numero, issue } };\n});\n"
+      }
+    },
+    {
+      "id": "c1a1e7d0-0007-4000-8000-000000000007",
+      "name": "Qual ação?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1320,
+        300
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "regra-criar",
+                    "leftValue": "={{ $json.acao }}",
+                    "rightValue": "criar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "criar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "regra-atualizar",
+                    "leftValue": "={{ $json.acao }}",
+                    "rightValue": "atualizar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "atualizar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "regra-reabrir",
+                    "leftValue": "={{ $json.acao }}",
+                    "rightValue": "reabrir",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "reabrir"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "regra-nenhuma",
+                    "leftValue": "={{ $json.acao }}",
+                    "rightValue": "nenhuma",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "nenhuma"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "c1a1e7d0-0008-4000-8000-000000000008",
+      "name": "GitHub: criar issue",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        60
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.GITHUB_URL_BASE || 'https://api.github.com' }}/repos/{{ $json.contexto.repositorio }}/issues",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.GITHUB_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            },
+            {
+              "name": "User-Agent",
+              "value": "triagem-de-falhas-ia"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ title: $json.issue.titulo, body: $json.issue.corpo, labels: $json.issue.rotulos }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "c1a1e7d0-0009-4000-8000-000000000009",
+      "name": "GitHub: atualizar issue",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        240
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.GITHUB_URL_BASE || 'https://api.github.com' }}/repos/{{ $json.contexto.repositorio }}/issues/{{ $json.numero }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.GITHUB_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            },
+            {
+              "name": "User-Agent",
+              "value": "triagem-de-falhas-ia"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ body: $json.issue.corpo }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "c1a1e7d0-0010-4000-8000-000000000010",
+      "name": "GitHub: reabrir issue",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        420
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.GITHUB_URL_BASE || 'https://api.github.com' }}/repos/{{ $json.contexto.repositorio }}/issues/{{ $json.numero }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.GITHUB_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            },
+            {
+              "name": "User-Agent",
+              "value": "triagem-de-falhas-ia"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ state: 'open', body: $json.issue.corpo }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "c1a1e7d0-0011-4000-8000-000000000011",
+      "name": "GitHub: comentar reabertura",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1780,
+        420
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.GITHUB_URL_BASE || 'https://api.github.com' }}/repos/{{ $('Decidir ação').item.json.contexto.repositorio }}/issues/{{ $('Decidir ação').item.json.numero }}/comments",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.GITHUB_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            },
+            {
+              "name": "User-Agent",
+              "value": "triagem-de-falhas-ia"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ body: 'A falha voltou a ocorrer em ' + $('Decidir ação').item.json.contexto.execucao.data + ' ([execução](' + $('Decidir ação').item.json.contexto.execucao.url + ')). Issue reaberta pela triagem com IA.' }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "c1a1e7d0-0012-4000-8000-000000000012",
+      "name": "Registrar criada",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2000,
+        60
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// ---- n8n/codigo/precos.js ----\n// Preço por milhão de tokens (US$), entrada e saída. Fonte: tabela de preços da Anthropic (nov/2026).\nconst PRECOS_POR_MILHAO = {\n  \"claude-opus-5-5\": { entrada: 4, saida: 20 },\n  \"claude-haiku-5-5\": { entrada: 0.1, saida: 0.5 },\n};\n\nfunction custoUsd(modelo, tokensEntrada, tokensSaida) {\n  const p = PRECOS_POR_MILHAO[modelo];\n  if (!p) return null;\n  return (tokensEntrada * p.entrada + tokensSaida * p.saida) / 1e6;\n}\n\nif (typeof module !== \"undefined\") module.exports = { custoUsd, PRECOS_POR_MILHAO };\n\n// ---- n8n/codigo/montar-requisicao-claude.js ----\nconst CATEGORIAS = [\"bug_produto\", \"teste_instavel\", \"teste_quebrado\"];\n\n// Modelos com fallback no servidor (beta server-side-fallback-2026-07-01). O Haiku 5.5 não tem.\nconst MODELOS_COM_FALLBACK = [\"claude-opus-5-5\", \"claude-sonnet-5-5\", \"claude-fable-5-2\"];\n\nconst ESQUEMA_TRIAGEM = {\n  type: \"object\",\n  properties: {\n    categoria: { type: \"string\", enum: CATEGORIAS },\n    confianca: { type: \"number\" },\n    resumo: { type: \"string\" },\n    passos: { type: \"array\", items: { type: \"string\" } },\n    esperado: { type: \"string\" },\n    obtido: { type: \"string\" },\n    causaProvavel: { type: \"string\" },\n    sugestaoCorrecao: { type: \"string\" },\n  },\n  required: [\"categoria\", \"confianca\", \"resumo\", \"passos\", \"esperado\", \"obtido\", \"causaProvavel\", \"sugestaoCorrecao\"],\n  additionalProperties: false,\n};\n\nfunction textoDaFalha(falha) {\n  return [\n    `Teste: ${falha.titulo}`,\n    `Arquivo: ${falha.arquivo}${falha.linha ? `, linha ${falha.linha}` : \"\"}`,\n    `Tentativas: ${falha.tentativas}`,\n    `Passou numa nova tentativa: ${falha.passouNaNovaTentativa ? \"sim\" : \"não\"}`,\n    `Duração total: ${falha.duracaoMs} ms`,\n    \"\",\n    \"Mensagem de erro:\",\n    falha.erro,\n    \"\",\n    \"Stack:\",\n    falha.stack || \"(sem stack)\",\n    \"\",\n    \"Trecho do código do teste:\",\n    falha.trechoCodigo || \"(código não disponível)\",\n    \"\",\n    falha.printBase64 ? \"O print da tela no momento da falha está anexado acima.\" : \"Não há print desta falha.\",\n  ].join(\"\\n\");\n}\n\n/** Corpo do POST /v1/messages para triar uma falha. */\nfunction montarRequisicaoClaude(falha, { promptSistema, modelo }) {\n  const conteudo = [];\n  if (falha.printBase64) {\n    conteudo.push({ type: \"image\", source: { type: \"base64\", media_type: \"image/png\", data: falha.printBase64 } });\n  }\n  conteudo.push({ type: \"text\", text: textoDaFalha(falha) });\n  const corpo = {\n    model: modelo,\n    max_tokens: 2000,\n    system: promptSistema,\n    output_config: { effort: \"low\", format: { type: \"json_schema\", schema: ESQUEMA_TRIAGEM } },\n    messages: [{ role: \"user\", content: conteudo }],\n  };\n  if (MODELOS_COM_FALLBACK.includes(modelo)) corpo.fallbacks = \"default\";\n  return corpo;\n}\n\nif (typeof module !== \"undefined\") module.exports = { montarRequisicaoClaude, ESQUEMA_TRIAGEM, CATEGORIAS };\n\n// ---- n8n/codigo/interpretar-resposta-claude.js ----\n// No n8n, precos.js é concatenado antes deste arquivo; nos testes, vem por require.\nfunction _custo(modelo, entrada, saida) {\n  const fn = typeof custoUsd === \"function\" ? custoUsd : require(\"./precos.js\").custoUsd;\n  return fn(modelo, entrada, saida);\n}\n\nconst CATEGORIAS_VALIDAS = [\"bug_produto\", \"teste_instavel\", \"teste_quebrado\"];\n\n/**\n * Converte a resposta da API (ou o erro HTTP) num resultado de triagem.\n * Nunca lança: qualquer problema vira `erroTriagem`, para a execução seguir com as outras falhas.\n */\nfunction interpretarRespostaClaude(respostaHttp, { modelo, inicioMs, fimMs }) {\n  const r = respostaHttp || {};\n  const tokensEntrada = r.usage?.input_tokens ?? 0;\n  const tokensSaida = r.usage?.output_tokens ?? 0;\n  const base = {\n    triagem: null,\n    erroTriagem: null,\n    tokensEntrada,\n    tokensSaida,\n    custoUsd: _custo(modelo, tokensEntrada, tokensSaida) ?? 0,\n    duracaoTriagemMs: fimMs - inicioMs,\n  };\n  const falhou = (motivo) => ({ ...base, erroTriagem: motivo });\n\n  if (r.error || (r.statusCode && r.statusCode >= 400)) {\n    const tipo = r.error?.type ?? \"erro\";\n    const msg = r.error?.message ?? \"\";\n    return falhou(`Erro da API (HTTP ${r.statusCode ?? \"?\"}): ${tipo}${msg ? ` - ${msg}` : \"\"}`);\n  }\n  if (r.stop_reason === \"refusal\") return falhou(\"A IA recusou a triagem desta falha.\");\n  if (r.stop_reason === \"max_tokens\") return falhou(\"Resposta cortada no limite de tokens.\");\n\n  const texto = (r.content || []).find((b) => b.type === \"text\")?.text;\n  let triagem;\n  try {\n    triagem = JSON.parse(texto);\n  } catch {\n    return falhou(\"A IA devolveu um JSON inválido.\");\n  }\n  if (!triagem || !CATEGORIAS_VALIDAS.includes(triagem.categoria)) {\n    return falhou(`A IA devolveu uma categoria inválida: ${triagem?.categoria}`);\n  }\n  return { ...base, triagem };\n}\n\nif (typeof module !== \"undefined\") module.exports = { interpretarRespostaClaude };\n\n// ---- n8n/codigo/decidir-acao-issue.js ----\n/**\n * Decide o que fazer com a issue de uma falha triada.\n * `issuesExistentes`: issues do repositório com o rótulo triagem-ia (abertas e fechadas).\n */\nfunction decidirAcaoIssue(falha, triagem, issuesExistentes) {\n  if (!triagem || triagem.categoria === \"teste_instavel\") return { acao: \"nenhuma\", numero: null };\n  const marcador = `<!-- triagem-ia:fp=${falha.id} -->`;\n  const mesmas = (issuesExistentes || []).filter((i) => (i.body || \"\").includes(marcador));\n  const aberta = mesmas.find((i) => i.state === \"open\");\n  if (aberta) return { acao: \"atualizar\", numero: aberta.number };\n  if (mesmas.length > 0) return { acao: \"reabrir\", numero: mesmas[0].number };\n  return { acao: \"criar\", numero: null };\n}\n\nif (typeof module !== \"undefined\") module.exports = { decidirAcaoIssue };\n\n// ---- n8n/codigo/renderizar-issue.js ----\nfunction lerOcorrencias(corpo) {\n  const m = (corpo || \"\").match(/<!-- triagem-ia:ocorrencias=(\\d+) -->/);\n  return m ? Number(m[1]) : 0;\n}\n\nconst NOME_CATEGORIA = {\n  bug_produto: \"Bug do produto\",\n  teste_quebrado: \"Teste quebrado\",\n  teste_instavel: \"Teste instável\",\n};\n\n/** Título, corpo (Markdown) e rótulos da issue. `ocorrenciasAnteriores` = contador lido da issue existente (0 se nova). */\nfunction renderizarIssue(falha, triagem, execucao, ocorrenciasAnteriores) {\n  const ocorrencias = (ocorrenciasAnteriores || 0) + 1;\n  const quebrado = triagem.categoria === \"teste_quebrado\";\n  const corpo = [\n    `**${NOME_CATEGORIA[triagem.categoria]}** · confiança da IA: ${Math.round(triagem.confianca * 100)}%`,\n    \"\",\n    `**Teste:** \\`${falha.titulo}\\``,\n    \"\",\n    \"### Passos para reproduzir\",\n    ...triagem.passos.map((p, i) => `${i + 1}. ${p}`),\n    \"\",\n    \"### Esperado\",\n    triagem.esperado,\n    \"\",\n    \"### Obtido\",\n    triagem.obtido,\n    \"\",\n    \"### Causa provável\",\n    triagem.causaProvavel,\n    \"\",\n    quebrado ? \"### Correção sugerida para o teste\" : \"### Sugestão\",\n    triagem.sugestaoCorrecao,\n    \"\",\n    \"---\",\n    `Ocorrências: ${ocorrencias} · Última ocorrência: ${execucao.data} ([execução ${execucao.id}](${execucao.url}), print e trace nos artefatos)`,\n    \"\",\n    \"> Issue aberta automaticamente pela triagem com IA. Esta falha foi plantada de propósito na demonstração (SauceDemo); o gabarito está em `testes/gabarito.json`.\",\n    \"\",\n    `<!-- triagem-ia:fp=${falha.id} -->`,\n    `<!-- triagem-ia:ocorrencias=${ocorrencias} -->`,\n  ].join(\"\\n\");\n  return { titulo: `[SauceDemo] ${triagem.resumo}`, corpo, rotulos: [\"triagem-ia\", triagem.categoria] };\n}\n\nif (typeof module !== \"undefined\") module.exports = { renderizarIssue, lerOcorrencias };\n\n// ---- n8n/codigo/montar-resultado.js ----\n/**\n * Resultado final de uma falha, devolvido pelo webhook.\n * `decisao`: item do nó \"Decidir ação\"; `acaoRealizada`: criada | atualizada | reaberta | nenhuma;\n * `respostaGithub`: corpo da resposta do GitHub (ou null quando não houve chamada).\n */\nfunction montarResultado(decisao, acaoRealizada, respostaGithub) {\n  let acaoIssue = acaoRealizada;\n  let issueUrl = null;\n  let erroIssue = null;\n  if (acaoRealizada !== \"nenhuma\") {\n    if (respostaGithub && respostaGithub.html_url) {\n      issueUrl = respostaGithub.html_url;\n    } else {\n      acaoIssue = \"nenhuma\";\n      erroIssue = `Falha ao ${acaoRealizada === \"criada\" ? \"criar\" : \"alterar\"} a issue: ${\n        respostaGithub?.error?.message ?? respostaGithub?.message ?? \"resposta sem link\"\n      }`;\n    }\n  }\n  return {\n    falhaId: decisao.falha.id,\n    titulo: decisao.falha.titulo,\n    triagem: decisao.triagem,\n    erroTriagem: decisao.erroTriagem,\n    acaoIssue,\n    issueUrl,\n    erroIssue,\n    tokensEntrada: decisao.tokensEntrada,\n    tokensSaida: decisao.tokensSaida,\n    custoUsd: decisao.custoUsd,\n    duracaoTriagemMs: decisao.duracaoTriagemMs,\n  };\n}\n\nif (typeof module !== \"undefined\") module.exports = { montarResultado };\n\n// ---- nó: Registrar criada ----\n// Nós \"Registrar ...\" (um por caminho, para cada item). criada é trocada pelo build.\nconst decisao = $(\"Decidir ação\").item.json;\nconst acao = \"criada\";\nreturn { json: montarResultado(decisao, acao, acao === \"nenhuma\" ? null : $json) };\n"
+      }
+    },
+    {
+      "id": "c1a1e7d0-0013-4000-8000-000000000013",
+      "name": "Registrar atualizada",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2000,
+        240
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// ---- n8n/codigo/precos.js ----\n// Preço por milhão de tokens (US$), entrada e saída. Fonte: tabela de preços da Anthropic (nov/2026).\nconst PRECOS_POR_MILHAO = {\n  \"claude-opus-5-5\": { entrada: 4, saida: 20 },\n  \"claude-haiku-5-5\": { entrada: 0.1, saida: 0.5 },\n};\n\nfunction custoUsd(modelo, tokensEntrada, tokensSaida) {\n  const p = PRECOS_POR_MILHAO[modelo];\n  if (!p) return null;\n  return (tokensEntrada * p.entrada + tokensSaida * p.saida) / 1e6;\n}\n\nif (typeof module !== \"undefined\") module.exports = { custoUsd, PRECOS_POR_MILHAO };\n\n// ---- n8n/codigo/montar-requisicao-claude.js ----\nconst CATEGORIAS = [\"bug_produto\", \"teste_instavel\", \"teste_quebrado\"];\n\n// Modelos com fallback no servidor (beta server-side-fallback-2026-07-01). O Haiku 5.5 não tem.\nconst MODELOS_COM_FALLBACK = [\"claude-opus-5-5\", \"claude-sonnet-5-5\", \"claude-fable-5-2\"];\n\nconst ESQUEMA_TRIAGEM = {\n  type: \"object\",\n  properties: {\n    categoria: { type: \"string\", enum: CATEGORIAS },\n    confianca: { type: \"number\" },\n    resumo: { type: \"string\" },\n    passos: { type: \"array\", items: { type: \"string\" } },\n    esperado: { type: \"string\" },\n    obtido: { type: \"string\" },\n    causaProvavel: { type: \"string\" },\n    sugestaoCorrecao: { type: \"string\" },\n  },\n  required: [\"categoria\", \"confianca\", \"resumo\", \"passos\", \"esperado\", \"obtido\", \"causaProvavel\", \"sugestaoCorrecao\"],\n  additionalProperties: false,\n};\n\nfunction textoDaFalha(falha) {\n  return [\n    `Teste: ${falha.titulo}`,\n    `Arquivo: ${falha.arquivo}${falha.linha ? `, linha ${falha.linha}` : \"\"}`,\n    `Tentativas: ${falha.tentativas}`,\n    `Passou numa nova tentativa: ${falha.passouNaNovaTentativa ? \"sim\" : \"não\"}`,\n    `Duração total: ${falha.duracaoMs} ms`,\n    \"\",\n    \"Mensagem de erro:\",\n    falha.erro,\n    \"\",\n    \"Stack:\",\n    falha.stack || \"(sem stack)\",\n    \"\",\n    \"Trecho do código do teste:\",\n    falha.trechoCodigo || \"(código não disponível)\",\n    \"\",\n    falha.printBase64 ? \"O print da tela no momento da falha está anexado acima.\" : \"Não há print desta falha.\",\n  ].join(\"\\n\");\n}\n\n/** Corpo do POST /v1/messages para triar uma falha. */\nfunction montarRequisicaoClaude(falha, { promptSistema, modelo }) {\n  const conteudo = [];\n  if (falha.printBase64) {\n    conteudo.push({ type: \"image\", source: { type: \"base64\", media_type: \"image/png\", data: falha.printBase64 } });\n  }\n  conteudo.push({ type: \"text\", text: textoDaFalha(falha) });\n  const corpo = {\n    model: modelo,\n    max_tokens: 2000,\n    system: promptSistema,\n    output_config: { effort: \"low\", format: { type: \"json_schema\", schema: ESQUEMA_TRIAGEM } },\n    messages: [{ role: \"user\", content: conteudo }],\n  };\n  if (MODELOS_COM_FALLBACK.includes(modelo)) corpo.fallbacks = \"default\";\n  return corpo;\n}\n\nif (typeof module !== \"undefined\") module.exports = { montarRequisicaoClaude, ESQUEMA_TRIAGEM, CATEGORIAS };\n\n// ---- n8n/codigo/interpretar-resposta-claude.js ----\n// No n8n, precos.js é concatenado antes deste arquivo; nos testes, vem por require.\nfunction _custo(modelo, entrada, saida) {\n  const fn = typeof custoUsd === \"function\" ? custoUsd : require(\"./precos.js\").custoUsd;\n  return fn(modelo, entrada, saida);\n}\n\nconst CATEGORIAS_VALIDAS = [\"bug_produto\", \"teste_instavel\", \"teste_quebrado\"];\n\n/**\n * Converte a resposta da API (ou o erro HTTP) num resultado de triagem.\n * Nunca lança: qualquer problema vira `erroTriagem`, para a execução seguir com as outras falhas.\n */\nfunction interpretarRespostaClaude(respostaHttp, { modelo, inicioMs, fimMs }) {\n  const r = respostaHttp || {};\n  const tokensEntrada = r.usage?.input_tokens ?? 0;\n  const tokensSaida = r.usage?.output_tokens ?? 0;\n  const base = {\n    triagem: null,\n    erroTriagem: null,\n    tokensEntrada,\n    tokensSaida,\n    custoUsd: _custo(modelo, tokensEntrada, tokensSaida) ?? 0,\n    duracaoTriagemMs: fimMs - inicioMs,\n  };\n  const falhou = (motivo) => ({ ...base, erroTriagem: motivo });\n\n  if (r.error || (r.statusCode && r.statusCode >= 400)) {\n    const tipo = r.error?.type ?? \"erro\";\n    const msg = r.error?.message ?? \"\";\n    return falhou(`Erro da API (HTTP ${r.statusCode ?? \"?\"}): ${tipo}${msg ? ` - ${msg}` : \"\"}`);\n  }\n  if (r.stop_reason === \"refusal\") return falhou(\"A IA recusou a triagem desta falha.\");\n  if (r.stop_reason === \"max_tokens\") return falhou(\"Resposta cortada no limite de tokens.\");\n\n  const texto = (r.content || []).find((b) => b.type === \"text\")?.text;\n  let triagem;\n  try {\n    triagem = JSON.parse(texto);\n  } catch {\n    return falhou(\"A IA devolveu um JSON inválido.\");\n  }\n  if (!triagem || !CATEGORIAS_VALIDAS.includes(triagem.categoria)) {\n    return falhou(`A IA devolveu uma categoria inválida: ${triagem?.categoria}`);\n  }\n  return { ...base, triagem };\n}\n\nif (typeof module !== \"undefined\") module.exports = { interpretarRespostaClaude };\n\n// ---- n8n/codigo/decidir-acao-issue.js ----\n/**\n * Decide o que fazer com a issue de uma falha triada.\n * `issuesExistentes`: issues do repositório com o rótulo triagem-ia (abertas e fechadas).\n */\nfunction decidirAcaoIssue(falha, triagem, issuesExistentes) {\n  if (!triagem || triagem.categoria === \"teste_instavel\") return { acao: \"nenhuma\", numero: null };\n  const marcador = `<!-- triagem-ia:fp=${falha.id} -->`;\n  const mesmas = (issuesExistentes || []).filter((i) => (i.body || \"\").includes(marcador));\n  const aberta = mesmas.find((i) => i.state === \"open\");\n  if (aberta) return { acao: \"atualizar\", numero: aberta.number };\n  if (mesmas.length > 0) return { acao: \"reabrir\", numero: mesmas[0].number };\n  return { acao: \"criar\", numero: null };\n}\n\nif (typeof module !== \"undefined\") module.exports = { decidirAcaoIssue };\n\n// ---- n8n/codigo/renderizar-issue.js ----\nfunction lerOcorrencias(corpo) {\n  const m = (corpo || \"\").match(/<!-- triagem-ia:ocorrencias=(\\d+) -->/);\n  return m ? Number(m[1]) : 0;\n}\n\nconst NOME_CATEGORIA = {\n  bug_produto: \"Bug do produto\",\n  teste_quebrado: \"Teste quebrado\",\n  teste_instavel: \"Teste instável\",\n};\n\n/** Título, corpo (Markdown) e rótulos da issue. `ocorrenciasAnteriores` = contador lido da issue existente (0 se nova). */\nfunction renderizarIssue(falha, triagem, execucao, ocorrenciasAnteriores) {\n  const ocorrencias = (ocorrenciasAnteriores || 0) + 1;\n  const quebrado = triagem.categoria === \"teste_quebrado\";\n  const corpo = [\n    `**${NOME_CATEGORIA[triagem.categoria]}** · confiança da IA: ${Math.round(triagem.confianca * 100)}%`,\n    \"\",\n    `**Teste:** \\`${falha.titulo}\\``,\n    \"\",\n    \"### Passos para reproduzir\",\n    ...triagem.passos.map((p, i) => `${i + 1}. ${p}`),\n    \"\",\n    \"### Esperado\",\n    triagem.esperado,\n    \"\",\n    \"### Obtido\",\n    triagem.obtido,\n    \"\",\n    \"### Causa provável\",\n    triagem.causaProvavel,\n    \"\",\n    quebrado ? \"### Correção sugerida para o teste\" : \"### Sugestão\",\n    triagem.sugestaoCorrecao,\n    \"\",\n    \"---\",\n    `Ocorrências: ${ocorrencias} · Última ocorrência: ${execucao.data} ([execução ${execucao.id}](${execucao.url}), print e trace nos artefatos)`,\n    \"\",\n    \"> Issue aberta automaticamente pela triagem com IA. Esta falha foi plantada de propósito na demonstração (SauceDemo); o gabarito está em `testes/gabarito.json`.\",\n    \"\",\n    `<!-- triagem-ia:fp=${falha.id} -->`,\n    `<!-- triagem-ia:ocorrencias=${ocorrencias} -->`,\n  ].join(\"\\n\");\n  return { titulo: `[SauceDemo] ${triagem.resumo}`, corpo, rotulos: [\"triagem-ia\", triagem.categoria] };\n}\n\nif (typeof module !== \"undefined\") module.exports = { renderizarIssue, lerOcorrencias };\n\n// ---- n8n/codigo/montar-resultado.js ----\n/**\n * Resultado final de uma falha, devolvido pelo webhook.\n * `decisao`: item do nó \"Decidir ação\"; `acaoRealizada`: criada | atualizada | reaberta | nenhuma;\n * `respostaGithub`: corpo da resposta do GitHub (ou null quando não houve chamada).\n */\nfunction montarResultado(decisao, acaoRealizada, respostaGithub) {\n  let acaoIssue = acaoRealizada;\n  let issueUrl = null;\n  let erroIssue = null;\n  if (acaoRealizada !== \"nenhuma\") {\n    if (respostaGithub && respostaGithub.html_url) {\n      issueUrl = respostaGithub.html_url;\n    } else {\n      acaoIssue = \"nenhuma\";\n      erroIssue = `Falha ao ${acaoRealizada === \"criada\" ? \"criar\" : \"alterar\"} a issue: ${\n        respostaGithub?.error?.message ?? respostaGithub?.message ?? \"resposta sem link\"\n      }`;\n    }\n  }\n  return {\n    falhaId: decisao.falha.id,\n    titulo: decisao.falha.titulo,\n    triagem: decisao.triagem,\n    erroTriagem: decisao.erroTriagem,\n    acaoIssue,\n    issueUrl,\n    erroIssue,\n    tokensEntrada: decisao.tokensEntrada,\n    tokensSaida: decisao.tokensSaida,\n    custoUsd: decisao.custoUsd,\n    duracaoTriagemMs: decisao.duracaoTriagemMs,\n  };\n}\n\nif (typeof module !== \"undefined\") module.exports = { montarResultado };\n\n// ---- nó: Registrar atualizada ----\n// Nós \"Registrar ...\" (um por caminho, para cada item). atualizada é trocada pelo build.\nconst decisao = $(\"Decidir ação\").item.json;\nconst acao = \"atualizada\";\nreturn { json: montarResultado(decisao, acao, acao === \"nenhuma\" ? null : $json) };\n"
+      }
+    },
+    {
+      "id": "c1a1e7d0-0014-4000-8000-000000000014",
+      "name": "Registrar reaberta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2000,
+        420
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// ---- n8n/codigo/precos.js ----\n// Preço por milhão de tokens (US$), entrada e saída. Fonte: tabela de preços da Anthropic (nov/2026).\nconst PRECOS_POR_MILHAO = {\n  \"claude-opus-5-5\": { entrada: 4, saida: 20 },\n  \"claude-haiku-5-5\": { entrada: 0.1, saida: 0.5 },\n};\n\nfunction custoUsd(modelo, tokensEntrada, tokensSaida) {\n  const p = PRECOS_POR_MILHAO[modelo];\n  if (!p) return null;\n  return (tokensEntrada * p.entrada + tokensSaida * p.saida) / 1e6;\n}\n\nif (typeof module !== \"undefined\") module.exports = { custoUsd, PRECOS_POR_MILHAO };\n\n// ---- n8n/codigo/montar-requisicao-claude.js ----\nconst CATEGORIAS = [\"bug_produto\", \"teste_instavel\", \"teste_quebrado\"];\n\n// Modelos com fallback no servidor (beta server-side-fallback-2026-07-01). O Haiku 5.5 não tem.\nconst MODELOS_COM_FALLBACK = [\"claude-opus-5-5\", \"claude-sonnet-5-5\", \"claude-fable-5-2\"];\n\nconst ESQUEMA_TRIAGEM = {\n  type: \"object\",\n  properties: {\n    categoria: { type: \"string\", enum: CATEGORIAS },\n    confianca: { type: \"number\" },\n    resumo: { type: \"string\" },\n    passos: { type: \"array\", items: { type: \"string\" } },\n    esperado: { type: \"string\" },\n    obtido: { type: \"string\" },\n    causaProvavel: { type: \"string\" },\n    sugestaoCorrecao: { type: \"string\" },\n  },\n  required: [\"categoria\", \"confianca\", \"resumo\", \"passos\", \"esperado\", \"obtido\", \"causaProvavel\", \"sugestaoCorrecao\"],\n  additionalProperties: false,\n};\n\nfunction textoDaFalha(falha) {\n  return [\n    `Teste: ${falha.titulo}`,\n    `Arquivo: ${falha.arquivo}${falha.linha ? `, linha ${falha.linha}` : \"\"}`,\n    `Tentativas: ${falha.tentativas}`,\n    `Passou numa nova tentativa: ${falha.passouNaNovaTentativa ? \"sim\" : \"não\"}`,\n    `Duração total: ${falha.duracaoMs} ms`,\n    \"\",\n    \"Mensagem de erro:\",\n    falha.erro,\n    \"\",\n    \"Stack:\",\n    falha.stack || \"(sem stack)\",\n    \"\",\n    \"Trecho do código do teste:\",\n    falha.trechoCodigo || \"(código não disponível)\",\n    \"\",\n    falha.printBase64 ? \"O print da tela no momento da falha está anexado acima.\" : \"Não há print desta falha.\",\n  ].join(\"\\n\");\n}\n\n/** Corpo do POST /v1/messages para triar uma falha. */\nfunction montarRequisicaoClaude(falha, { promptSistema, modelo }) {\n  const conteudo = [];\n  if (falha.printBase64) {\n    conteudo.push({ type: \"image\", source: { type: \"base64\", media_type: \"image/png\", data: falha.printBase64 } });\n  }\n  conteudo.push({ type: \"text\", text: textoDaFalha(falha) });\n  const corpo = {\n    model: modelo,\n    max_tokens: 2000,\n    system: promptSistema,\n    output_config: { effort: \"low\", format: { type: \"json_schema\", schema: ESQUEMA_TRIAGEM } },\n    messages: [{ role: \"user\", content: conteudo }],\n  };\n  if (MODELOS_COM_FALLBACK.includes(modelo)) corpo.fallbacks = \"default\";\n  return corpo;\n}\n\nif (typeof module !== \"undefined\") module.exports = { montarRequisicaoClaude, ESQUEMA_TRIAGEM, CATEGORIAS };\n\n// ---- n8n/codigo/interpretar-resposta-claude.js ----\n// No n8n, precos.js é concatenado antes deste arquivo; nos testes, vem por require.\nfunction _custo(modelo, entrada, saida) {\n  const fn = typeof custoUsd === \"function\" ? custoUsd : require(\"./precos.js\").custoUsd;\n  return fn(modelo, entrada, saida);\n}\n\nconst CATEGORIAS_VALIDAS = [\"bug_produto\", \"teste_instavel\", \"teste_quebrado\"];\n\n/**\n * Converte a resposta da API (ou o erro HTTP) num resultado de triagem.\n * Nunca lança: qualquer problema vira `erroTriagem`, para a execução seguir com as outras falhas.\n */\nfunction interpretarRespostaClaude(respostaHttp, { modelo, inicioMs, fimMs }) {\n  const r = respostaHttp || {};\n  const tokensEntrada = r.usage?.input_tokens ?? 0;\n  const tokensSaida = r.usage?.output_tokens ?? 0;\n  const base = {\n    triagem: null,\n    erroTriagem: null,\n    tokensEntrada,\n    tokensSaida,\n    custoUsd: _custo(modelo, tokensEntrada, tokensSaida) ?? 0,\n    duracaoTriagemMs: fimMs - inicioMs,\n  };\n  const falhou = (motivo) => ({ ...base, erroTriagem: motivo });\n\n  if (r.error || (r.statusCode && r.statusCode >= 400)) {\n    const tipo = r.error?.type ?? \"erro\";\n    const msg = r.error?.message ?? \"\";\n    return falhou(`Erro da API (HTTP ${r.statusCode ?? \"?\"}): ${tipo}${msg ? ` - ${msg}` : \"\"}`);\n  }\n  if (r.stop_reason === \"refusal\") return falhou(\"A IA recusou a triagem desta falha.\");\n  if (r.stop_reason === \"max_tokens\") return falhou(\"Resposta cortada no limite de tokens.\");\n\n  const texto = (r.content || []).find((b) => b.type === \"text\")?.text;\n  let triagem;\n  try {\n    triagem = JSON.parse(texto);\n  } catch {\n    return falhou(\"A IA devolveu um JSON inválido.\");\n  }\n  if (!triagem || !CATEGORIAS_VALIDAS.includes(triagem.categoria)) {\n    return falhou(`A IA devolveu uma categoria inválida: ${triagem?.categoria}`);\n  }\n  return { ...base, triagem };\n}\n\nif (typeof module !== \"undefined\") module.exports = { interpretarRespostaClaude };\n\n// ---- n8n/codigo/decidir-acao-issue.js ----\n/**\n * Decide o que fazer com a issue de uma falha triada.\n * `issuesExistentes`: issues do repositório com o rótulo triagem-ia (abertas e fechadas).\n */\nfunction decidirAcaoIssue(falha, triagem, issuesExistentes) {\n  if (!triagem || triagem.categoria === \"teste_instavel\") return { acao: \"nenhuma\", numero: null };\n  const marcador = `<!-- triagem-ia:fp=${falha.id} -->`;\n  const mesmas = (issuesExistentes || []).filter((i) => (i.body || \"\").includes(marcador));\n  const aberta = mesmas.find((i) => i.state === \"open\");\n  if (aberta) return { acao: \"atualizar\", numero: aberta.number };\n  if (mesmas.length > 0) return { acao: \"reabrir\", numero: mesmas[0].number };\n  return { acao: \"criar\", numero: null };\n}\n\nif (typeof module !== \"undefined\") module.exports = { decidirAcaoIssue };\n\n// ---- n8n/codigo/renderizar-issue.js ----\nfunction lerOcorrencias(corpo) {\n  const m = (corpo || \"\").match(/<!-- triagem-ia:ocorrencias=(\\d+) -->/);\n  return m ? Number(m[1]) : 0;\n}\n\nconst NOME_CATEGORIA = {\n  bug_produto: \"Bug do produto\",\n  teste_quebrado: \"Teste quebrado\",\n  teste_instavel: \"Teste instável\",\n};\n\n/** Título, corpo (Markdown) e rótulos da issue. `ocorrenciasAnteriores` = contador lido da issue existente (0 se nova). */\nfunction renderizarIssue(falha, triagem, execucao, ocorrenciasAnteriores) {\n  const ocorrencias = (ocorrenciasAnteriores || 0) + 1;\n  const quebrado = triagem.categoria === \"teste_quebrado\";\n  const corpo = [\n    `**${NOME_CATEGORIA[triagem.categoria]}** · confiança da IA: ${Math.round(triagem.confianca * 100)}%`,\n    \"\",\n    `**Teste:** \\`${falha.titulo}\\``,\n    \"\",\n    \"### Passos para reproduzir\",\n    ...triagem.passos.map((p, i) => `${i + 1}. ${p}`),\n    \"\",\n    \"### Esperado\",\n    triagem.esperado,\n    \"\",\n    \"### Obtido\",\n    triagem.obtido,\n    \"\",\n    \"### Causa provável\",\n    triagem.causaProvavel,\n    \"\",\n    quebrado ? \"### Correção sugerida para o teste\" : \"### Sugestão\",\n    triagem.sugestaoCorrecao,\n    \"\",\n    \"---\",\n    `Ocorrências: ${ocorrencias} · Última ocorrência: ${execucao.data} ([execução ${execucao.id}](${execucao.url}), print e trace nos artefatos)`,\n    \"\",\n    \"> Issue aberta automaticamente pela triagem com IA. Esta falha foi plantada de propósito na demonstração (SauceDemo); o gabarito está em `testes/gabarito.json`.\",\n    \"\",\n    `<!-- triagem-ia:fp=${falha.id} -->`,\n    `<!-- triagem-ia:ocorrencias=${ocorrencias} -->`,\n  ].join(\"\\n\");\n  return { titulo: `[SauceDemo] ${triagem.resumo}`, corpo, rotulos: [\"triagem-ia\", triagem.categoria] };\n}\n\nif (typeof module !== \"undefined\") module.exports = { renderizarIssue, lerOcorrencias };\n\n// ---- n8n/codigo/montar-resultado.js ----\n/**\n * Resultado final de uma falha, devolvido pelo webhook.\n * `decisao`: item do nó \"Decidir ação\"; `acaoRealizada`: criada | atualizada | reaberta | nenhuma;\n * `respostaGithub`: corpo da resposta do GitHub (ou null quando não houve chamada).\n */\nfunction montarResultado(decisao, acaoRealizada, respostaGithub) {\n  let acaoIssue = acaoRealizada;\n  let issueUrl = null;\n  let erroIssue = null;\n  if (acaoRealizada !== \"nenhuma\") {\n    if (respostaGithub && respostaGithub.html_url) {\n      issueUrl = respostaGithub.html_url;\n    } else {\n      acaoIssue = \"nenhuma\";\n      erroIssue = `Falha ao ${acaoRealizada === \"criada\" ? \"criar\" : \"alterar\"} a issue: ${\n        respostaGithub?.error?.message ?? respostaGithub?.message ?? \"resposta sem link\"\n      }`;\n    }\n  }\n  return {\n    falhaId: decisao.falha.id,\n    titulo: decisao.falha.titulo,\n    triagem: decisao.triagem,\n    erroTriagem: decisao.erroTriagem,\n    acaoIssue,\n    issueUrl,\n    erroIssue,\n    tokensEntrada: decisao.tokensEntrada,\n    tokensSaida: decisao.tokensSaida,\n    custoUsd: decisao.custoUsd,\n    duracaoTriagemMs: decisao.duracaoTriagemMs,\n  };\n}\n\nif (typeof module !== \"undefined\") module.exports = { montarResultado };\n\n// ---- nó: Registrar reaberta ----\n// Nó \"Registrar reaberta\" (para cada item): o link vem da resposta do PATCH que reabriu a issue.\nconst decisao = $(\"Decidir ação\").item.json;\nreturn { json: montarResultado(decisao, \"reaberta\", $(\"GitHub: reabrir issue\").item.json) };\n"
+      }
+    },
+    {
+      "id": "c1a1e7d0-0015-4000-8000-000000000015",
+      "name": "Registrar sem issue",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2000,
+        600
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// ---- n8n/codigo/precos.js ----\n// Preço por milhão de tokens (US$), entrada e saída. Fonte: tabela de preços da Anthropic (nov/2026).\nconst PRECOS_POR_MILHAO = {\n  \"claude-opus-5-5\": { entrada: 4, saida: 20 },\n  \"claude-haiku-5-5\": { entrada: 0.1, saida: 0.5 },\n};\n\nfunction custoUsd(modelo, tokensEntrada, tokensSaida) {\n  const p = PRECOS_POR_MILHAO[modelo];\n  if (!p) return null;\n  return (tokensEntrada * p.entrada + tokensSaida * p.saida) / 1e6;\n}\n\nif (typeof module !== \"undefined\") module.exports = { custoUsd, PRECOS_POR_MILHAO };\n\n// ---- n8n/codigo/montar-requisicao-claude.js ----\nconst CATEGORIAS = [\"bug_produto\", \"teste_instavel\", \"teste_quebrado\"];\n\n// Modelos com fallback no servidor (beta server-side-fallback-2026-07-01). O Haiku 5.5 não tem.\nconst MODELOS_COM_FALLBACK = [\"claude-opus-5-5\", \"claude-sonnet-5-5\", \"claude-fable-5-2\"];\n\nconst ESQUEMA_TRIAGEM = {\n  type: \"object\",\n  properties: {\n    categoria: { type: \"string\", enum: CATEGORIAS },\n    confianca: { type: \"number\" },\n    resumo: { type: \"string\" },\n    passos: { type: \"array\", items: { type: \"string\" } },\n    esperado: { type: \"string\" },\n    obtido: { type: \"string\" },\n    causaProvavel: { type: \"string\" },\n    sugestaoCorrecao: { type: \"string\" },\n  },\n  required: [\"categoria\", \"confianca\", \"resumo\", \"passos\", \"esperado\", \"obtido\", \"causaProvavel\", \"sugestaoCorrecao\"],\n  additionalProperties: false,\n};\n\nfunction textoDaFalha(falha) {\n  return [\n    `Teste: ${falha.titulo}`,\n    `Arquivo: ${falha.arquivo}${falha.linha ? `, linha ${falha.linha}` : \"\"}`,\n    `Tentativas: ${falha.tentativas}`,\n    `Passou numa nova tentativa: ${falha.passouNaNovaTentativa ? \"sim\" : \"não\"}`,\n    `Duração total: ${falha.duracaoMs} ms`,\n    \"\",\n    \"Mensagem de erro:\",\n    falha.erro,\n    \"\",\n    \"Stack:\",\n    falha.stack || \"(sem stack)\",\n    \"\",\n    \"Trecho do código do teste:\",\n    falha.trechoCodigo || \"(código não disponível)\",\n    \"\",\n    falha.printBase64 ? \"O print da tela no momento da falha está anexado acima.\" : \"Não há print desta falha.\",\n  ].join(\"\\n\");\n}\n\n/** Corpo do POST /v1/messages para triar uma falha. */\nfunction montarRequisicaoClaude(falha, { promptSistema, modelo }) {\n  const conteudo = [];\n  if (falha.printBase64) {\n    conteudo.push({ type: \"image\", source: { type: \"base64\", media_type: \"image/png\", data: falha.printBase64 } });\n  }\n  conteudo.push({ type: \"text\", text: textoDaFalha(falha) });\n  const corpo = {\n    model: modelo,\n    max_tokens: 2000,\n    system: promptSistema,\n    output_config: { effort: \"low\", format: { type: \"json_schema\", schema: ESQUEMA_TRIAGEM } },\n    messages: [{ role: \"user\", content: conteudo }],\n  };\n  if (MODELOS_COM_FALLBACK.includes(modelo)) corpo.fallbacks = \"default\";\n  return corpo;\n}\n\nif (typeof module !== \"undefined\") module.exports = { montarRequisicaoClaude, ESQUEMA_TRIAGEM, CATEGORIAS };\n\n// ---- n8n/codigo/interpretar-resposta-claude.js ----\n// No n8n, precos.js é concatenado antes deste arquivo; nos testes, vem por require.\nfunction _custo(modelo, entrada, saida) {\n  const fn = typeof custoUsd === \"function\" ? custoUsd : require(\"./precos.js\").custoUsd;\n  return fn(modelo, entrada, saida);\n}\n\nconst CATEGORIAS_VALIDAS = [\"bug_produto\", \"teste_instavel\", \"teste_quebrado\"];\n\n/**\n * Converte a resposta da API (ou o erro HTTP) num resultado de triagem.\n * Nunca lança: qualquer problema vira `erroTriagem`, para a execução seguir com as outras falhas.\n */\nfunction interpretarRespostaClaude(respostaHttp, { modelo, inicioMs, fimMs }) {\n  const r = respostaHttp || {};\n  const tokensEntrada = r.usage?.input_tokens ?? 0;\n  const tokensSaida = r.usage?.output_tokens ?? 0;\n  const base = {\n    triagem: null,\n    erroTriagem: null,\n    tokensEntrada,\n    tokensSaida,\n    custoUsd: _custo(modelo, tokensEntrada, tokensSaida) ?? 0,\n    duracaoTriagemMs: fimMs - inicioMs,\n  };\n  const falhou = (motivo) => ({ ...base, erroTriagem: motivo });\n\n  if (r.error || (r.statusCode && r.statusCode >= 400)) {\n    const tipo = r.error?.type ?? \"erro\";\n    const msg = r.error?.message ?? \"\";\n    return falhou(`Erro da API (HTTP ${r.statusCode ?? \"?\"}): ${tipo}${msg ? ` - ${msg}` : \"\"}`);\n  }\n  if (r.stop_reason === \"refusal\") return falhou(\"A IA recusou a triagem desta falha.\");\n  if (r.stop_reason === \"max_tokens\") return falhou(\"Resposta cortada no limite de tokens.\");\n\n  const texto = (r.content || []).find((b) => b.type === \"text\")?.text;\n  let triagem;\n  try {\n    triagem = JSON.parse(texto);\n  } catch {\n    return falhou(\"A IA devolveu um JSON inválido.\");\n  }\n  if (!triagem || !CATEGORIAS_VALIDAS.includes(triagem.categoria)) {\n    return falhou(`A IA devolveu uma categoria inválida: ${triagem?.categoria}`);\n  }\n  return { ...base, triagem };\n}\n\nif (typeof module !== \"undefined\") module.exports = { interpretarRespostaClaude };\n\n// ---- n8n/codigo/decidir-acao-issue.js ----\n/**\n * Decide o que fazer com a issue de uma falha triada.\n * `issuesExistentes`: issues do repositório com o rótulo triagem-ia (abertas e fechadas).\n */\nfunction decidirAcaoIssue(falha, triagem, issuesExistentes) {\n  if (!triagem || triagem.categoria === \"teste_instavel\") return { acao: \"nenhuma\", numero: null };\n  const marcador = `<!-- triagem-ia:fp=${falha.id} -->`;\n  const mesmas = (issuesExistentes || []).filter((i) => (i.body || \"\").includes(marcador));\n  const aberta = mesmas.find((i) => i.state === \"open\");\n  if (aberta) return { acao: \"atualizar\", numero: aberta.number };\n  if (mesmas.length > 0) return { acao: \"reabrir\", numero: mesmas[0].number };\n  return { acao: \"criar\", numero: null };\n}\n\nif (typeof module !== \"undefined\") module.exports = { decidirAcaoIssue };\n\n// ---- n8n/codigo/renderizar-issue.js ----\nfunction lerOcorrencias(corpo) {\n  const m = (corpo || \"\").match(/<!-- triagem-ia:ocorrencias=(\\d+) -->/);\n  return m ? Number(m[1]) : 0;\n}\n\nconst NOME_CATEGORIA = {\n  bug_produto: \"Bug do produto\",\n  teste_quebrado: \"Teste quebrado\",\n  teste_instavel: \"Teste instável\",\n};\n\n/** Título, corpo (Markdown) e rótulos da issue. `ocorrenciasAnteriores` = contador lido da issue existente (0 se nova). */\nfunction renderizarIssue(falha, triagem, execucao, ocorrenciasAnteriores) {\n  const ocorrencias = (ocorrenciasAnteriores || 0) + 1;\n  const quebrado = triagem.categoria === \"teste_quebrado\";\n  const corpo = [\n    `**${NOME_CATEGORIA[triagem.categoria]}** · confiança da IA: ${Math.round(triagem.confianca * 100)}%`,\n    \"\",\n    `**Teste:** \\`${falha.titulo}\\``,\n    \"\",\n    \"### Passos para reproduzir\",\n    ...triagem.passos.map((p, i) => `${i + 1}. ${p}`),\n    \"\",\n    \"### Esperado\",\n    triagem.esperado,\n    \"\",\n    \"### Obtido\",\n    triagem.obtido,\n    \"\",\n    \"### Causa provável\",\n    triagem.causaProvavel,\n    \"\",\n    quebrado ? \"### Correção sugerida para o teste\" : \"### Sugestão\",\n    triagem.sugestaoCorrecao,\n    \"\",\n    \"---\",\n    `Ocorrências: ${ocorrencias} · Última ocorrência: ${execucao.data} ([execução ${execucao.id}](${execucao.url}), print e trace nos artefatos)`,\n    \"\",\n    \"> Issue aberta automaticamente pela triagem com IA. Esta falha foi plantada de propósito na demonstração (SauceDemo); o gabarito está em `testes/gabarito.json`.\",\n    \"\",\n    `<!-- triagem-ia:fp=${falha.id} -->`,\n    `<!-- triagem-ia:ocorrencias=${ocorrencias} -->`,\n  ].join(\"\\n\");\n  return { titulo: `[SauceDemo] ${triagem.resumo}`, corpo, rotulos: [\"triagem-ia\", triagem.categoria] };\n}\n\nif (typeof module !== \"undefined\") module.exports = { renderizarIssue, lerOcorrencias };\n\n// ---- n8n/codigo/montar-resultado.js ----\n/**\n * Resultado final de uma falha, devolvido pelo webhook.\n * `decisao`: item do nó \"Decidir ação\"; `acaoRealizada`: criada | atualizada | reaberta | nenhuma;\n * `respostaGithub`: corpo da resposta do GitHub (ou null quando não houve chamada).\n */\nfunction montarResultado(decisao, acaoRealizada, respostaGithub) {\n  let acaoIssue = acaoRealizada;\n  let issueUrl = null;\n  let erroIssue = null;\n  if (acaoRealizada !== \"nenhuma\") {\n    if (respostaGithub && respostaGithub.html_url) {\n      issueUrl = respostaGithub.html_url;\n    } else {\n      acaoIssue = \"nenhuma\";\n      erroIssue = `Falha ao ${acaoRealizada === \"criada\" ? \"criar\" : \"alterar\"} a issue: ${\n        respostaGithub?.error?.message ?? respostaGithub?.message ?? \"resposta sem link\"\n      }`;\n    }\n  }\n  return {\n    falhaId: decisao.falha.id,\n    titulo: decisao.falha.titulo,\n    triagem: decisao.triagem,\n    erroTriagem: decisao.erroTriagem,\n    acaoIssue,\n    issueUrl,\n    erroIssue,\n    tokensEntrada: decisao.tokensEntrada,\n    tokensSaida: decisao.tokensSaida,\n    custoUsd: decisao.custoUsd,\n    duracaoTriagemMs: decisao.duracaoTriagemMs,\n  };\n}\n\nif (typeof module !== \"undefined\") module.exports = { montarResultado };\n\n// ---- nó: Registrar sem issue ----\n// Nós \"Registrar ...\" (um por caminho, para cada item). nenhuma é trocada pelo build.\nconst decisao = $(\"Decidir ação\").item.json;\nconst acao = \"nenhuma\";\nreturn { json: montarResultado(decisao, acao, acao === \"nenhuma\" ? null : $json) };\n"
+      }
+    },
+    {
+      "id": "c1a1e7d0-0016-4000-8000-000000000016",
+      "name": "Juntar resultados",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2220,
+        300
+      ],
+      "parameters": {
+        "numberInputs": 4
+      }
+    },
+    {
+      "id": "c1a1e7d0-0017-4000-8000-000000000017",
+      "name": "Montar resposta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2440,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// ---- n8n/codigo/precos.js ----\n// Preço por milhão de tokens (US$), entrada e saída. Fonte: tabela de preços da Anthropic (nov/2026).\nconst PRECOS_POR_MILHAO = {\n  \"claude-opus-5-5\": { entrada: 4, saida: 20 },\n  \"claude-haiku-5-5\": { entrada: 0.1, saida: 0.5 },\n};\n\nfunction custoUsd(modelo, tokensEntrada, tokensSaida) {\n  const p = PRECOS_POR_MILHAO[modelo];\n  if (!p) return null;\n  return (tokensEntrada * p.entrada + tokensSaida * p.saida) / 1e6;\n}\n\nif (typeof module !== \"undefined\") module.exports = { custoUsd, PRECOS_POR_MILHAO };\n\n// ---- n8n/codigo/montar-requisicao-claude.js ----\nconst CATEGORIAS = [\"bug_produto\", \"teste_instavel\", \"teste_quebrado\"];\n\n// Modelos com fallback no servidor (beta server-side-fallback-2026-07-01). O Haiku 5.5 não tem.\nconst MODELOS_COM_FALLBACK = [\"claude-opus-5-5\", \"claude-sonnet-5-5\", \"claude-fable-5-2\"];\n\nconst ESQUEMA_TRIAGEM = {\n  type: \"object\",\n  properties: {\n    categoria: { type: \"string\", enum: CATEGORIAS },\n    confianca: { type: \"number\" },\n    resumo: { type: \"string\" },\n    passos: { type: \"array\", items: { type: \"string\" } },\n    esperado: { type: \"string\" },\n    obtido: { type: \"string\" },\n    causaProvavel: { type: \"string\" },\n    sugestaoCorrecao: { type: \"string\" },\n  },\n  required: [\"categoria\", \"confianca\", \"resumo\", \"passos\", \"esperado\", \"obtido\", \"causaProvavel\", \"sugestaoCorrecao\"],\n  additionalProperties: false,\n};\n\nfunction textoDaFalha(falha) {\n  return [\n    `Teste: ${falha.titulo}`,\n    `Arquivo: ${falha.arquivo}${falha.linha ? `, linha ${falha.linha}` : \"\"}`,\n    `Tentativas: ${falha.tentativas}`,\n    `Passou numa nova tentativa: ${falha.passouNaNovaTentativa ? \"sim\" : \"não\"}`,\n    `Duração total: ${falha.duracaoMs} ms`,\n    \"\",\n    \"Mensagem de erro:\",\n    falha.erro,\n    \"\",\n    \"Stack:\",\n    falha.stack || \"(sem stack)\",\n    \"\",\n    \"Trecho do código do teste:\",\n    falha.trechoCodigo || \"(código não disponível)\",\n    \"\",\n    falha.printBase64 ? \"O print da tela no momento da falha está anexado acima.\" : \"Não há print desta falha.\",\n  ].join(\"\\n\");\n}\n\n/** Corpo do POST /v1/messages para triar uma falha. */\nfunction montarRequisicaoClaude(falha, { promptSistema, modelo }) {\n  const conteudo = [];\n  if (falha.printBase64) {\n    conteudo.push({ type: \"image\", source: { type: \"base64\", media_type: \"image/png\", data: falha.printBase64 } });\n  }\n  conteudo.push({ type: \"text\", text: textoDaFalha(falha) });\n  const corpo = {\n    model: modelo,\n    max_tokens: 2000,\n    system: promptSistema,\n    output_config: { effort: \"low\", format: { type: \"json_schema\", schema: ESQUEMA_TRIAGEM } },\n    messages: [{ role: \"user\", content: conteudo }],\n  };\n  if (MODELOS_COM_FALLBACK.includes(modelo)) corpo.fallbacks = \"default\";\n  return corpo;\n}\n\nif (typeof module !== \"undefined\") module.exports = { montarRequisicaoClaude, ESQUEMA_TRIAGEM, CATEGORIAS };\n\n// ---- n8n/codigo/interpretar-resposta-claude.js ----\n// No n8n, precos.js é concatenado antes deste arquivo; nos testes, vem por require.\nfunction _custo(modelo, entrada, saida) {\n  const fn = typeof custoUsd === \"function\" ? custoUsd : require(\"./precos.js\").custoUsd;\n  return fn(modelo, entrada, saida);\n}\n\nconst CATEGORIAS_VALIDAS = [\"bug_produto\", \"teste_instavel\", \"teste_quebrado\"];\n\n/**\n * Converte a resposta da API (ou o erro HTTP) num resultado de triagem.\n * Nunca lança: qualquer problema vira `erroTriagem`, para a execução seguir com as outras falhas.\n */\nfunction interpretarRespostaClaude(respostaHttp, { modelo, inicioMs, fimMs }) {\n  const r = respostaHttp || {};\n  const tokensEntrada = r.usage?.input_tokens ?? 0;\n  const tokensSaida = r.usage?.output_tokens ?? 0;\n  const base = {\n    triagem: null,\n    erroTriagem: null,\n    tokensEntrada,\n    tokensSaida,\n    custoUsd: _custo(modelo, tokensEntrada, tokensSaida) ?? 0,\n    duracaoTriagemMs: fimMs - inicioMs,\n  };\n  const falhou = (motivo) => ({ ...base, erroTriagem: motivo });\n\n  if (r.error || (r.statusCode && r.statusCode >= 400)) {\n    const tipo = r.error?.type ?? \"erro\";\n    const msg = r.error?.message ?? \"\";\n    return falhou(`Erro da API (HTTP ${r.statusCode ?? \"?\"}): ${tipo}${msg ? ` - ${msg}` : \"\"}`);\n  }\n  if (r.stop_reason === \"refusal\") return falhou(\"A IA recusou a triagem desta falha.\");\n  if (r.stop_reason === \"max_tokens\") return falhou(\"Resposta cortada no limite de tokens.\");\n\n  const texto = (r.content || []).find((b) => b.type === \"text\")?.text;\n  let triagem;\n  try {\n    triagem = JSON.parse(texto);\n  } catch {\n    return falhou(\"A IA devolveu um JSON inválido.\");\n  }\n  if (!triagem || !CATEGORIAS_VALIDAS.includes(triagem.categoria)) {\n    return falhou(`A IA devolveu uma categoria inválida: ${triagem?.categoria}`);\n  }\n  return { ...base, triagem };\n}\n\nif (typeof module !== \"undefined\") module.exports = { interpretarRespostaClaude };\n\n// ---- n8n/codigo/decidir-acao-issue.js ----\n/**\n * Decide o que fazer com a issue de uma falha triada.\n * `issuesExistentes`: issues do repositório com o rótulo triagem-ia (abertas e fechadas).\n */\nfunction decidirAcaoIssue(falha, triagem, issuesExistentes) {\n  if (!triagem || triagem.categoria === \"teste_instavel\") return { acao: \"nenhuma\", numero: null };\n  const marcador = `<!-- triagem-ia:fp=${falha.id} -->`;\n  const mesmas = (issuesExistentes || []).filter((i) => (i.body || \"\").includes(marcador));\n  const aberta = mesmas.find((i) => i.state === \"open\");\n  if (aberta) return { acao: \"atualizar\", numero: aberta.number };\n  if (mesmas.length > 0) return { acao: \"reabrir\", numero: mesmas[0].number };\n  return { acao: \"criar\", numero: null };\n}\n\nif (typeof module !== \"undefined\") module.exports = { decidirAcaoIssue };\n\n// ---- n8n/codigo/renderizar-issue.js ----\nfunction lerOcorrencias(corpo) {\n  const m = (corpo || \"\").match(/<!-- triagem-ia:ocorrencias=(\\d+) -->/);\n  return m ? Number(m[1]) : 0;\n}\n\nconst NOME_CATEGORIA = {\n  bug_produto: \"Bug do produto\",\n  teste_quebrado: \"Teste quebrado\",\n  teste_instavel: \"Teste instável\",\n};\n\n/** Título, corpo (Markdown) e rótulos da issue. `ocorrenciasAnteriores` = contador lido da issue existente (0 se nova). */\nfunction renderizarIssue(falha, triagem, execucao, ocorrenciasAnteriores) {\n  const ocorrencias = (ocorrenciasAnteriores || 0) + 1;\n  const quebrado = triagem.categoria === \"teste_quebrado\";\n  const corpo = [\n    `**${NOME_CATEGORIA[triagem.categoria]}** · confiança da IA: ${Math.round(triagem.confianca * 100)}%`,\n    \"\",\n    `**Teste:** \\`${falha.titulo}\\``,\n    \"\",\n    \"### Passos para reproduzir\",\n    ...triagem.passos.map((p, i) => `${i + 1}. ${p}`),\n    \"\",\n    \"### Esperado\",\n    triagem.esperado,\n    \"\",\n    \"### Obtido\",\n    triagem.obtido,\n    \"\",\n    \"### Causa provável\",\n    triagem.causaProvavel,\n    \"\",\n    quebrado ? \"### Correção sugerida para o teste\" : \"### Sugestão\",\n    triagem.sugestaoCorrecao,\n    \"\",\n    \"---\",\n    `Ocorrências: ${ocorrencias} · Última ocorrência: ${execucao.data} ([execução ${execucao.id}](${execucao.url}), print e trace nos artefatos)`,\n    \"\",\n    \"> Issue aberta automaticamente pela triagem com IA. Esta falha foi plantada de propósito na demonstração (SauceDemo); o gabarito está em `testes/gabarito.json`.\",\n    \"\",\n    `<!-- triagem-ia:fp=${falha.id} -->`,\n    `<!-- triagem-ia:ocorrencias=${ocorrencias} -->`,\n  ].join(\"\\n\");\n  return { titulo: `[SauceDemo] ${triagem.resumo}`, corpo, rotulos: [\"triagem-ia\", triagem.categoria] };\n}\n\nif (typeof module !== \"undefined\") module.exports = { renderizarIssue, lerOcorrencias };\n\n// ---- n8n/codigo/montar-resultado.js ----\n/**\n * Resultado final de uma falha, devolvido pelo webhook.\n * `decisao`: item do nó \"Decidir ação\"; `acaoRealizada`: criada | atualizada | reaberta | nenhuma;\n * `respostaGithub`: corpo da resposta do GitHub (ou null quando não houve chamada).\n */\nfunction montarResultado(decisao, acaoRealizada, respostaGithub) {\n  let acaoIssue = acaoRealizada;\n  let issueUrl = null;\n  let erroIssue = null;\n  if (acaoRealizada !== \"nenhuma\") {\n    if (respostaGithub && respostaGithub.html_url) {\n      issueUrl = respostaGithub.html_url;\n    } else {\n      acaoIssue = \"nenhuma\";\n      erroIssue = `Falha ao ${acaoRealizada === \"criada\" ? \"criar\" : \"alterar\"} a issue: ${\n        respostaGithub?.error?.message ?? respostaGithub?.message ?? \"resposta sem link\"\n      }`;\n    }\n  }\n  return {\n    falhaId: decisao.falha.id,\n    titulo: decisao.falha.titulo,\n    triagem: decisao.triagem,\n    erroTriagem: decisao.erroTriagem,\n    acaoIssue,\n    issueUrl,\n    erroIssue,\n    tokensEntrada: decisao.tokensEntrada,\n    tokensSaida: decisao.tokensSaida,\n    custoUsd: decisao.custoUsd,\n    duracaoTriagemMs: decisao.duracaoTriagemMs,\n  };\n}\n\nif (typeof module !== \"undefined\") module.exports = { montarResultado };\n\n// ---- nó: Montar resposta ----\n// Nó \"Montar resposta\" (uma vez para todos os itens).\nreturn [{ json: { resultados: $input.all().map((i) => i.json) } }];\n"
+      }
+    },
+    {
+      "id": "c1a1e7d0-0018-4000-8000-000000000018",
+      "name": "Responder",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2660,
+        300
+      ],
+      "parameters": {
+        "respondWith": "firstIncomingItem",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "GitHub: listar issues",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GitHub: listar issues": {
+      "main": [
+        [
+          {
+            "node": "Preparar falhas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar falhas": {
+      "main": [
+        [
+          {
+            "node": "Claude: triar falha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: triar falha": {
+      "main": [
+        [
+          {
+            "node": "Interpretar triagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Interpretar triagem": {
+      "main": [
+        [
+          {
+            "node": "Decidir ação",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decidir ação": {
+      "main": [
+        [
+          {
+            "node": "Qual ação?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qual ação?": {
+      "main": [
+        [
+          {
+            "node": "GitHub: criar issue",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "GitHub: atualizar issue",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "GitHub: reabrir issue",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Registrar sem issue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GitHub: criar issue": {
+      "main": [
+        [
+          {
+            "node": "Registrar criada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GitHub: atualizar issue": {
+      "main": [
+        [
+          {
+            "node": "Registrar atualizada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GitHub: reabrir issue": {
+      "main": [
+        [
+          {
+            "node": "GitHub: comentar reabertura",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GitHub: comentar reabertura": {
+      "main": [
+        [
+          {
+            "node": "Registrar reaberta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar criada": {
+      "main": [
+        [
+          {
+            "node": "Juntar resultados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar atualizada": {
+      "main": [
+        [
+          {
+            "node": "Juntar resultados",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Registrar reaberta": {
+      "main": [
+        [
+          {
+            "node": "Juntar resultados",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Registrar sem issue": {
+      "main": [
+        [
+          {
+            "node": "Juntar resultados",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Juntar resultados": {
+      "main": [
+        [
+          {
+            "node": "Montar resposta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar resposta": {
+      "main": [
+        [
+          {
+            "node": "Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": true
+}
