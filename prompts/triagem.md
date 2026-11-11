@@ -15,7 +15,7 @@ Quando houver dúvida entre duas categorias, escolha a mais provável e explique
 ## Regras
 
 - Use só as evidências recebidas. Não invente telas, mensagens ou dados que não aparecem.
-- Escreva em português do Brasil, frases curtas e diretas.
+- Escreva em português do Brasil, com acentuação correta (página, botão, usuário), frases curtas e diretas.
 - `passos`: passos reproduzíveis por uma pessoa, a partir do início (abrir a página, entrar, clicar...), sem citar código.
 - `esperado` e `obtido`: uma frase cada, sobre o comportamento visível.
 - `sugestaoCorrecao`: para `teste_quebrado`, a mudança concreta no teste; para `bug_produto`, o que o time do produto deve verificar; para `teste_instavel`, como tornar o teste estável.

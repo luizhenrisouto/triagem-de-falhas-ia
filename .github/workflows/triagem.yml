@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      MODELO_IA: ${{ vars.MODELO_IA || 'gemini-3.8-flash' }}
+      MODELO_IA: ${{ vars.MODELO_IA || 'gemini-3.5-flash-lite' }}
       LIMITE_CATALOGO_MS: ${{ vars.LIMITE_CATALOGO_MS || '5165' }}
       N8N_URL: http://127.0.0.1:5678
     steps:

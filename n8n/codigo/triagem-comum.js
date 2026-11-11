@@ -52,4 +52,27 @@ function lerTriagemDoTexto(texto) {
   return { triagem, erro: null };
 }
 
-if (typeof module !== "undefined") module.exports = { CATEGORIAS, ESQUEMA_TRIAGEM, textoDaFalha, lerTriagemDoTexto };
+/**
+ * Texto de erro legível para respostas de erro de Claude ou Gemini, no formato direto da API
+ * ou no formato do n8n após esgotar as novas tentativas (mensagem "503 - \"{...json...}\"").
+ * Devolve null quando a resposta não é erro.
+ */
+function descreverErroHttp(r) {
+  if (!r || (!r.error && !(r.statusCode >= 400))) return null;
+  let erro = r.error || {};
+  let status = r.statusCode ?? (typeof erro.status === "number" ? erro.status : undefined) ?? erro.code;
+  const embutido = typeof erro.message === "string" && erro.message.match(/^(\d{3}) - ([\s\S]*)$/);
+  if (embutido) {
+    status = Number(embutido[1]);
+    try {
+      let corpo = JSON.parse(embutido[2]);
+      if (typeof corpo === "string") corpo = JSON.parse(corpo);
+      if (corpo && corpo.error) erro = corpo.error;
+    } catch {}
+  }
+  const tipo = erro.type ?? (typeof erro.status === "string" ? erro.status : undefined) ?? "erro";
+  const msg = embutido && erro === r.error ? embutido[2] : (erro.message ?? "");
+  return `Erro da API (HTTP ${status ?? "?"}): ${tipo}${msg ? ` - ${msg}` : ""}`;
+}
+
+if (typeof module !== "undefined") module.exports = { CATEGORIAS, ESQUEMA_TRIAGEM, textoDaFalha, lerTriagemDoTexto, descreverErroHttp };

@@ -104,6 +104,20 @@ describe("interpretarRespostaGemini", () => {
   });
 });
 
+describe("erro no formato do n8n (após as novas tentativas)", () => {
+  test("extrai status e mensagem do JSON dentro da mensagem", () => {
+    const itemN8n = {
+      error: {
+        message: "503 - " + JSON.stringify(JSON.stringify({ error: { code: 503, message: "This model is currently experiencing high demand.", status: "UNAVAILABLE" } }, null, 2) + String.fromCharCode(10)),
+        code: "ERR_BAD_RESPONSE",
+        status: 503,
+      },
+    };
+    const r = interpretarRespostaGemini(itemN8n, ctx);
+    expect(r.erroTriagem).toBe("Erro da API (HTTP 503): UNAVAILABLE - This model is currently experiencing high demand.");
+  });
+});
+
 describe("custoUsd do Gemini", () => {
   test("nível gratuito custa zero", () => {
     expect(custoUsd("gemini-3.8-flash", 1e6, 1e6)).toBe(0);

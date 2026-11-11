@@ -2,6 +2,7 @@
 const _depsClaude = {
   custoUsd: typeof custoUsd === "function" ? custoUsd : require("./precos.js").custoUsd,
   lerTriagemDoTexto: typeof lerTriagemDoTexto === "function" ? lerTriagemDoTexto : require("./triagem-comum.js").lerTriagemDoTexto,
+  descreverErroHttp: typeof descreverErroHttp === "function" ? descreverErroHttp : require("./triagem-comum.js").descreverErroHttp,
 };
 
 /**
@@ -22,11 +23,8 @@ function interpretarRespostaClaude(respostaHttp, { modelo, inicioMs, fimMs }) {
   };
   const falhou = (motivo) => ({ ...base, erroTriagem: motivo });
 
-  if (r.error || (r.statusCode && r.statusCode >= 400)) {
-    const tipo = r.error?.type ?? "erro";
-    const msg = r.error?.message ?? "";
-    return falhou(`Erro da API (HTTP ${r.statusCode ?? "?"}): ${tipo}${msg ? ` - ${msg}` : ""}`);
-  }
+  const erroHttp = _depsClaude.descreverErroHttp(r);
+  if (erroHttp) return falhou(erroHttp);
   if (r.stop_reason === "refusal") return falhou("A IA recusou a triagem desta falha.");
   if (r.stop_reason === "max_tokens") return falhou("Resposta cortada no limite de tokens.");
 

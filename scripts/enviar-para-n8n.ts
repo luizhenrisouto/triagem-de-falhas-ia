@@ -2,7 +2,7 @@
  * Lê o relatório de testes, envia as falhas ao webhook do n8n e grava o resumo da execução.
  * Uso: npx tsx scripts/enviar-para-n8n.ts --relatorio relatorios/resultado.json --saida relatorios/resumo.json
  * Aceita o JSON do Playwright ou um JUnit XML (extensão .xml).
- * Variáveis: N8N_URL, MODELO_IA (padrão gemini-3.8-flash; claude-* usa o Claude), GITHUB_RUN_ID, GITHUB_SERVER_URL, GITHUB_REPOSITORY, GITHUB_SHA.
+ * Variáveis: N8N_URL, MODELO_IA (padrão gemini-3.5-flash-lite; claude-* usa o Claude), GITHUB_RUN_ID, GITHUB_SERVER_URL, GITHUB_REPOSITORY, GITHUB_SHA.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -50,7 +50,7 @@ export async function executarEnvio(o: Opcoes): Promise<ResumoExecucao> {
   const gabaritoArq = path.join(o.raiz, "testes/gabarito.json");
   const gabarito = fs.existsSync(gabaritoArq) ? JSON.parse(fs.readFileSync(gabaritoArq, "utf8")) : {};
   const execucao = montarExecucao(o.env);
-  const modelo = o.env.MODELO_IA || "gemini-3.8-flash";
+  const modelo = o.env.MODELO_IA || "gemini-3.5-flash-lite";
   const base = { execucao, modelo, gabarito, ...contarTestes(o.relatorio) };
   const gravar = (resultados: ResultadoTriagem[]) => {
     const resumo = calcularResumo({ ...base, resultados });

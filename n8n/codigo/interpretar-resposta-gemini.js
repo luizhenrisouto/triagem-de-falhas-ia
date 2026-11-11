@@ -2,6 +2,7 @@
 const _depsGemini = {
   custoUsd: typeof custoUsd === "function" ? custoUsd : require("./precos.js").custoUsd,
   lerTriagemDoTexto: typeof lerTriagemDoTexto === "function" ? lerTriagemDoTexto : require("./triagem-comum.js").lerTriagemDoTexto,
+  descreverErroHttp: typeof descreverErroHttp === "function" ? descreverErroHttp : require("./triagem-comum.js").descreverErroHttp,
 };
 
 /**
@@ -23,11 +24,8 @@ function interpretarRespostaGemini(respostaHttp, { modelo, inicioMs, fimMs }) {
   };
   const falhou = (motivo) => ({ ...base, erroTriagem: motivo });
 
-  if (r.error || (r.statusCode && r.statusCode >= 400)) {
-    const status = r.error?.status ?? "erro";
-    const msg = r.error?.message ?? "";
-    return falhou(`Erro da API (HTTP ${r.statusCode ?? r.error?.code ?? "?"}): ${status}${msg ? ` - ${msg}` : ""}`);
-  }
+  const erroHttp = _depsGemini.descreverErroHttp(r);
+  if (erroHttp) return falhou(erroHttp);
   if (r.promptFeedback?.blockReason) return falhou(`A IA bloqueou o pedido (${r.promptFeedback.blockReason}).`);
 
   const candidato = (r.candidates || [])[0];
