@@ -1,13 +1,11 @@
-// No n8n, precos.js é concatenado antes deste arquivo; nos testes, vem por require.
-function _custo(modelo, entrada, saida) {
-  const fn = typeof custoUsd === "function" ? custoUsd : require("./precos.js").custoUsd;
-  return fn(modelo, entrada, saida);
-}
-
-const CATEGORIAS_VALIDAS = ["bug_produto", "teste_instavel", "teste_quebrado"];
+// No n8n, precos.js e triagem-comum.js são concatenados antes deste arquivo; nos testes, vêm por require.
+const _depsClaude = {
+  custoUsd: typeof custoUsd === "function" ? custoUsd : require("./precos.js").custoUsd,
+  lerTriagemDoTexto: typeof lerTriagemDoTexto === "function" ? lerTriagemDoTexto : require("./triagem-comum.js").lerTriagemDoTexto,
+};
 
 /**
- * Converte a resposta da API (ou o erro HTTP) num resultado de triagem.
+ * Converte a resposta da API do Claude (ou o erro HTTP) num resultado de triagem.
  * Nunca lança: qualquer problema vira `erroTriagem`, para a execução seguir com as outras falhas.
  */
 function interpretarRespostaClaude(respostaHttp, { modelo, inicioMs, fimMs }) {
@@ -19,7 +17,7 @@ function interpretarRespostaClaude(respostaHttp, { modelo, inicioMs, fimMs }) {
     erroTriagem: null,
     tokensEntrada,
     tokensSaida,
-    custoUsd: _custo(modelo, tokensEntrada, tokensSaida) ?? 0,
+    custoUsd: _depsClaude.custoUsd(modelo, tokensEntrada, tokensSaida) ?? 0,
     duracaoTriagemMs: fimMs - inicioMs,
   };
   const falhou = (motivo) => ({ ...base, erroTriagem: motivo });
@@ -33,16 +31,8 @@ function interpretarRespostaClaude(respostaHttp, { modelo, inicioMs, fimMs }) {
   if (r.stop_reason === "max_tokens") return falhou("Resposta cortada no limite de tokens.");
 
   const texto = (r.content || []).find((b) => b.type === "text")?.text;
-  let triagem;
-  try {
-    triagem = JSON.parse(texto);
-  } catch {
-    return falhou("A IA devolveu um JSON inválido.");
-  }
-  if (!triagem || !CATEGORIAS_VALIDAS.includes(triagem.categoria)) {
-    return falhou(`A IA devolveu uma categoria inválida: ${triagem?.categoria}`);
-  }
-  return { ...base, triagem };
+  const { triagem, erro } = _depsClaude.lerTriagemDoTexto(texto);
+  return erro ? falhou(erro) : { ...base, triagem };
 }
 
 if (typeof module !== "undefined") module.exports = { interpretarRespostaClaude };

@@ -12,7 +12,7 @@ const ENV = {
   GITHUB_SERVER_URL: "https://github.com",
   GITHUB_REPOSITORY: "dono/repo",
   GITHUB_SHA: "abc123",
-  MODELO_CLAUDE: "claude-opus-5-5",
+  MODELO_IA: "claude-opus-5-5",
 };
 
 const saida = () => path.join(fs.mkdtempSync(path.join(os.tmpdir(), "envio-")), "resumo.json");

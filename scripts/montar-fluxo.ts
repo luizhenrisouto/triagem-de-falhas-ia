@@ -10,8 +10,12 @@ import path from "node:path";
 
 const BIBLIOTECAS = [
   "precos",
+  "triagem-comum",
+  "provedor",
   "montar-requisicao-claude",
+  "montar-requisicao-gemini",
   "interpretar-resposta-claude",
+  "interpretar-resposta-gemini",
   "decidir-acao-issue",
   "renderizar-issue",
   "montar-resultado",

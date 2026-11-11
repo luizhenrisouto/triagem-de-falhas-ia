@@ -31,15 +31,16 @@ const respostaClaude = (c: Chamada) => {
 };
 
 let claude: Duble;
+let gemini: Duble;
 let github: Duble;
 let n8n: N8nRodando;
 let issues: any[] = [];
 
-const enviar = async (falhas = FALHAS) => {
+const enviar = async (falhas = FALHAS, modelo = "claude-opus-5-5") => {
   const r = await fetch(`${n8n.url}/webhook/triagem`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ execucao, repositorio: REPO, modelo: "claude-opus-5-5", promptSistema: "P", falhas }),
+    body: JSON.stringify({ execucao, repositorio: REPO, modelo, promptSistema: "P", falhas }),
   });
   expect(r.status).toBe(200);
   return (await r.json()) as { resultados: any[] };
@@ -47,6 +48,14 @@ const enviar = async (falhas = FALHAS) => {
 
 beforeAll(async () => {
   claude = await criarDuble(respostaClaude);
+  gemini = await criarDuble((c) => {
+    const texto: string = c.corpo.contents[0].parts.at(-1).text;
+    const categoria = texto.includes("ERRO_BUG") ? "bug_produto" : texto.includes("ERRO_INSTAVEL") ? "teste_instavel" : "teste_quebrado";
+    return {
+      status: 200,
+      corpo: { candidates: [{ content: { parts: [{ text: JSON.stringify(triagem(categoria)) }] }, finishReason: "STOP" }], usageMetadata: { promptTokenCount: 80, candidatesTokenCount: 40 } },
+    };
+  });
   github = await criarDuble((c) => {
     if (c.metodo === "GET") return { status: 200, corpo: issues };
     if (c.metodo === "POST" && c.caminho.endsWith("/issues")) {
@@ -64,13 +73,14 @@ beforeAll(async () => {
   });
   n8n = await subirN8n({
     porta: PORTA,
-    env: { CLAUDE_URL_BASE: claude.url, GITHUB_URL_BASE: github.url, ANTHROPIC_API_KEY: "chave-falsa", GITHUB_TOKEN: "token-falso" },
+    env: { CLAUDE_URL_BASE: claude.url, GEMINI_URL_BASE: gemini.url, GITHUB_URL_BASE: github.url, ANTHROPIC_API_KEY: "chave-falsa", GEMINI_API_KEY: "chave-gemini-falsa", GITHUB_TOKEN: "token-falso" },
   });
 }, 300_000);
 
 afterAll(async () => {
   n8n?.parar();
   await claude?.fechar();
+  await gemini?.fechar();
   await github?.fechar();
 });
 
@@ -114,5 +124,17 @@ describe("fluxo n8n", () => {
     expect(ruim.erroTriagem).toContain("500");
     expect(ruim.acaoIssue).toBe("nenhuma");
     expect(resultados.find((r) => r.falhaId === "bbbbbbbbbbbb").triagem.categoria).toBe("teste_instavel");
+  }, 120_000);
+
+  test("modelo gemini-* usa o Gemini, com a chave do Google e sem chamar o Claude", async () => {
+    const antesClaude = claude.chamadas.length;
+    const { resultados } = await enviar([FALHAS[1]], "gemini-3.8-flash");
+    expect(resultados[0].triagem.categoria).toBe("teste_instavel");
+    expect(resultados[0].custoUsd).toBe(0);
+    expect(claude.chamadas.length).toBe(antesClaude);
+    const chamada = gemini.chamadas.at(-1)!;
+    expect(chamada.caminho).toBe("/v1beta/models/gemini-3.8-flash:generateContent");
+    expect(chamada.headers["x-goog-api-key"]).toBe("chave-gemini-falsa");
+    expect(chamada.headers["x-api-key"]).toBeUndefined();
   }, 120_000);
 });

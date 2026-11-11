@@ -16,6 +16,7 @@ describe("montarFluxo", () => {
   test("cada nó Code traz as bibliotecas e o próprio código", () => {
     const codes = fluxo.nodes.filter((n: any) => n.type === "n8n-nodes-base.code");
     expect(codes).toHaveLength(8);
+    for (const n of codes) expect(n.parameters.jsCode).toContain("function montarRequisicaoGemini(");
     for (const n of codes) {
       expect(n.parameters.jsCode).toContain("function montarResultado(");
       expect(n.parameters.jsCode).toContain("function custoUsd(");

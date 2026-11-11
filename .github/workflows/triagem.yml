@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      MODELO_CLAUDE: ${{ vars.MODELO_CLAUDE || 'claude-opus-5-5' }}
+      MODELO_IA: ${{ vars.MODELO_IA || 'gemini-3.8-flash' }}
       LIMITE_CATALOGO_MS: ${{ vars.LIMITE_CATALOGO_MS || '5165' }}
       N8N_URL: http://127.0.0.1:5678
     steps:
@@ -49,6 +49,7 @@ jobs:
       - name: Subir o n8n com o fluxo de triagem
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           npm run fluxo:montar
