@@ -1,0 +1,79 @@
+{
+  "id": "43091781210",
+  "data": "2026-11-11T19:58:38.666Z",
+  "url": "https://github.com/luizhenrisouto/triagem-de-falhas-ia/actions/runs/43091781210",
+  "commit": "d9f233ee5dcacc4bc329030cd8167ae216206288",
+  "modelo": "gemini-3.8-flash",
+  "totalTestes": 9,
+  "aprovados": 5,
+  "falhas": 4,
+  "porCategoria": {
+    "bug_produto": 0,
+    "teste_instavel": 0,
+    "teste_quebrado": 0
+  },
+  "acertoGabaritoPct": 0,
+  "duracaoMediaTriagemMs": null,
+  "custoUsd": 0,
+  "minutosManuaisEstimados": 0,
+  "minutosEconomizados": 0,
+  "issues": {
+    "criadas": 0,
+    "atualizadas": 0,
+    "reabertas": 0
+  },
+  "resultados": [
+    {
+      "falhaId": "5a048fa577ca",
+      "titulo": "carrinho.spec.ts > Carrinho > remover produto esvazia o carrinho",
+      "triagem": null,
+      "erroTriagem": "Erro da API (HTTP ERR_BAD_RESPONSE): 503 - 503 - \"{\\n  \\\"error\\\": {\\n    \\\"code\\\": 503,\\n    \\\"message\\\": \\\"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\\\",\\n    \\\"status\\\": \\\"UNAVAILABLE\\\"\\n  }\\n}\\n\"",
+      "acaoIssue": "nenhuma",
+      "issueUrl": null,
+      "erroIssue": null,
+      "tokensEntrada": 0,
+      "tokensSaida": 0,
+      "custoUsd": 0,
+      "duracaoTriagemMs": 48851
+    },
+    {
+      "falhaId": "8728c72772d0",
+      "titulo": "catalogo.spec.ts > Catálogo > imagem de cada produto corresponde ao produto",
+      "triagem": null,
+      "erroTriagem": "Erro da API (HTTP ERR_BAD_RESPONSE): 503 - 503 - \"{\\n  \\\"error\\\": {\\n    \\\"code\\\": 503,\\n    \\\"message\\\": \\\"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\\\",\\n    \\\"status\\\": \\\"UNAVAILABLE\\\"\\n  }\\n}\\n\"",
+      "acaoIssue": "nenhuma",
+      "issueUrl": null,
+      "erroIssue": null,
+      "tokensEntrada": 0,
+      "tokensSaida": 0,
+      "custoUsd": 0,
+      "duracaoTriagemMs": 48851
+    },
+    {
+      "falhaId": "5eec75cf73c3",
+      "titulo": "checkout.spec.ts > Checkout > campo sobrenome aceita texto no checkout",
+      "triagem": null,
+      "erroTriagem": "Erro da API (HTTP ERR_BAD_RESPONSE): 503 - 503 - \"{\\n  \\\"error\\\": {\\n    \\\"code\\\": 503,\\n    \\\"message\\\": \\\"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\\\",\\n    \\\"status\\\": \\\"UNAVAILABLE\\\"\\n  }\\n}\\n\"",
+      "acaoIssue": "nenhuma",
+      "issueUrl": null,
+      "erroIssue": null,
+      "tokensEntrada": 0,
+      "tokensSaida": 0,
+      "custoUsd": 0,
+      "duracaoTriagemMs": 48851
+    },
+    {
+      "falhaId": "e9aaf5aae52d",
+      "titulo": "checkout.spec.ts > Checkout > finalizar compra conclui o pedido",
+      "triagem": null,
+      "erroTriagem": "Erro da API (HTTP ERR_BAD_RESPONSE): 503 - 503 - \"{\\n  \\\"error\\\": {\\n    \\\"code\\\": 503,\\n    \\\"message\\\": \\\"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\\\",\\n    \\\"status\\\": \\\"UNAVAILABLE\\\"\\n  }\\n}\\n\"",
+      "acaoIssue": "nenhuma",
+      "issueUrl": null,
+      "erroIssue": null,
+      "tokensEntrada": 0,
+      "tokensSaida": 0,
+      "custoUsd": 0,
+      "duracaoTriagemMs": 48851
+    }
+  ]
+}
