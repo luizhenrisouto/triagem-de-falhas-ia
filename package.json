@@ -1,0 +1,24 @@
+{
+  "name": "triagem-de-falhas-ia",
+  "version": "1.0.0",
+  "description": "Triagem de falhas de teste com IA (n8n + Claude)",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "author": "Luiz Henri Souto",
+  "license": "MIT",
+  "type": "commonjs",
+  "devDependencies": {
+    "@playwright/test": "^1.65.0",
+    "@types/node": "^26.6.6",
+    "fast-xml-parser": "^5.12.0",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  },
+  "private": true
+}
