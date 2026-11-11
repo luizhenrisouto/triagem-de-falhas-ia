@@ -1,0 +1,116 @@
+name: Triagem de falhas com IA
+
+on:
+  push:
+    branches: [main, construcao]
+  workflow_dispatch:
+  schedule:
+    - cron: "0 11 * * *" # 08:00 em Brasília
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: triagem
+  cancel-in-progress: false
+
+jobs:
+  triagem:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      MODELO_CLAUDE: ${{ vars.MODELO_CLAUDE || 'claude-opus-5-5' }}
+      LIMITE_CATALOGO_MS: ${{ vars.LIMITE_CATALOGO_MS || '5165' }}
+      N8N_URL: http://127.0.0.1:5678
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Testes unitários da triagem
+        run: npm test
+
+      - name: Instalar o navegador
+        run: npx playwright install --with-deps chromium
+
+      - name: Rodar a suíte no SauceDemo
+        continue-on-error: true # as falhas são o insumo da triagem
+        run: npx playwright test
+        env:
+          CI: "true"
+
+      - name: Subir o n8n com o fluxo de triagem
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          npm run fluxo:montar
+          nohup npx tsx scripts/subir-n8n.ts > n8n.log 2>&1 &
+          for i in $(seq 1 150); do
+            if grep -q "n8n pronto" n8n.log; then echo "n8n pronto"; exit 0; fi
+            if grep -qE "saiu com código|falhou" n8n.log; then break; fi
+            sleep 2
+          done
+          cat n8n.log
+          exit 1
+
+      - name: Triar as falhas
+        run: npx tsx scripts/enviar-para-n8n.ts --relatorio relatorios/resultado.json --saida relatorios/resumo.json
+
+      - name: Resumo da execução
+        if: always() && hashFiles('relatorios/resumo.json') != ''
+        run: |
+          node -e '
+            const r = require("./relatorios/resumo.json");
+            const nomes = { bug_produto: "bug do produto", teste_instavel: "teste instável", teste_quebrado: "teste quebrado" };
+            const linhas = [
+              "## Triagem com IA",
+              "",
+              `Testes: ${r.totalTestes} · aprovados: ${r.aprovados} · falhas: ${r.falhas}`,
+              `Acerto contra o gabarito: ${r.acertoGabaritoPct ?? "-"}% · custo: US$ ${r.custoUsd.toFixed(4)}`,
+              "",
+              "| Teste | Categoria da IA | Issue |",
+              "| --- | --- | --- |",
+              ...r.resultados.map(x => `| ${x.titulo} | ${x.triagem ? nomes[x.triagem.categoria] : "sem triagem: " + x.erroTriagem} | ${x.issueUrl ? `[${x.acaoIssue}](${x.issueUrl})` : x.erroIssue ?? "-"} |`),
+            ];
+            console.log(linhas.join("\n"));
+          ' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publicar histórico na branch gh-pages
+        if: always() && hashFiles('relatorios/resumo.json') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          remoto="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git ls-remote --exit-code --heads "$remoto" gh-pages > /dev/null; then
+            git clone --depth 1 --branch gh-pages "$remoto" publicacao
+          else
+            mkdir publicacao
+            git -C publicacao init -b gh-pages
+            git -C publicacao remote add origin "$remoto"
+          fi
+          npx tsx scripts/publicar-historico.ts --resumo relatorios/resumo.json --destino publicacao
+          cd publicacao
+          git add -A
+          git -c user.name="triagem-ia[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -m "Execução ${GITHUB_RUN_ID}" || exit 0
+          git push origin gh-pages
+
+      - name: Guardar prints, traces e log do n8n
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencias-${{ github.run_id }}
+          path: |
+            test-results/
+            relatorios/
+            n8n.log
+          retention-days: 7
+          if-no-files-found: ignore
