@@ -1,0 +1,206 @@
+<testsuites id="" name="" tests="9" failures="3" skipped="0" errors="1" time="15.858666000000001">
+<testsuite name="carrinho.spec.ts" timestamp="2026-11-11T18:11:17.943Z" hostname="chromium" tests="2" failures="0" skipped="0" time="7.435" errors="1">
+<testcase name="Carrinho › adicionar produto atualiza o contador do carrinho" classname="carrinho.spec.ts" time="1.38">
+</testcase>
+<testcase name="Carrinho › remover produto esvazia o carrinho" classname="carrinho.spec.ts" time="6.055">
+<system-out>
+<![CDATA[
+[[ATTACHMENT|..\test-results\carrinho-Carrinho-remover-produto-esvazia-o-carrinho-chromium\test-failed-1.png]]
+
+[[ATTACHMENT|..\test-results\carrinho-Carrinho-remover-produto-esvazia-o-carrinho-chromium\error-context.md]]
+
+[[ATTACHMENT|..\test-results\carrinho-Carrinho-remover-produto-esvazia-o-carrinho-chromium\trace.zip]]
+]]>
+</system-out>
+<error message="locator.click: Timeout 5000ms exceeded." type="TimeoutError">
+<![CDATA[  [chromium] › carrinho.spec.ts:11:3 › Carrinho › remover produto esvazia o carrinho ───────────────
+
+    TimeoutError: locator.click: Timeout 5000ms exceeded.
+    Call log:
+      - waiting for getByTestId('remover-item')
+
+
+      13 |     await page.getByTestId("add-to-cart-sauce-labs-backpack").click();
+      14 |     await page.getByTestId("shopping-cart-link").click();
+    > 15 |     await page.getByTestId("remover-item").click({ timeout: 5_000 });
+         |                                            ^
+      16 |     await expect(page.getByTestId("inventory-item")).toHaveCount(0);
+      17 |   });
+      18 | });
+        at testes\e2e\carrinho.spec.ts:15:44
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ..\..\test-results\carrinho-Carrinho-remover-produto-esvazia-o-carrinho-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ..\..\test-results\carrinho-Carrinho-remover-produto-esvazia-o-carrinho-chromium\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ..\..\test-results\carrinho-Carrinho-remover-produto-esvazia-o-carrinho-chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace ..\..\test-results\carrinho-Carrinho-remover-produto-esvazia-o-carrinho-chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</error>
+</testcase>
+</testsuite>
+<testsuite name="catalogo.spec.ts" timestamp="2026-11-11T18:11:17.943Z" hostname="chromium" tests="4" failures="1" skipped="0" time="8.816" errors="0">
+<testcase name="Catálogo › login mostra o catálogo de produtos" classname="catalogo.spec.ts" time="1.236">
+</testcase>
+<testcase name="Catálogo › ordenar por menor preço coloca o item mais barato primeiro" classname="catalogo.spec.ts" time="0.941">
+</testcase>
+<testcase name="Catálogo › imagem de cada produto corresponde ao produto" classname="catalogo.spec.ts" time="0.806">
+<system-out>
+<![CDATA[
+[[ATTACHMENT|..\test-results\catalogo-Catálogo-imagem-d-10425-duto-corresponde-ao-produto-chromium\test-failed-1.png]]
+
+[[ATTACHMENT|..\test-results\catalogo-Catálogo-imagem-d-10425-duto-corresponde-ao-produto-chromium\error-context.md]]
+
+[[ATTACHMENT|..\test-results\catalogo-Catálogo-imagem-d-10425-duto-corresponde-ao-produto-chromium\trace.zip]]
+]]>
+</system-out>
+<failure message="expect(received).toBe(expected) // Object.is equality" type="expect.toBe">
+<![CDATA[  [chromium] › catalogo.spec.ts:20:3 › Catálogo › imagem de cada produto corresponde ao produto ────
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 6
+    Received: 1
+
+      23 |       els.map((e) => (e as HTMLImageElement).getAttribute("src")),
+      24 |     );
+    > 25 |     expect(new Set(imagens).size).toBe(imagens.length);
+         |                                   ^
+      26 |   });
+      27 |
+      28 |   test("catálogo abre em tempo aceitável", async ({ page }) => {
+        at testes\e2e\catalogo.spec.ts:25:35
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ..\..\test-results\catalogo-Catálogo-imagem-d-10425-duto-corresponde-ao-produto-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ..\..\test-results\catalogo-Catálogo-imagem-d-10425-duto-corresponde-ao-produto-chromium\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ..\..\test-results\catalogo-Catálogo-imagem-d-10425-duto-corresponde-ao-produto-chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace ..\..\test-results\catalogo-Catálogo-imagem-d-10425-duto-corresponde-ao-produto-chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+</testcase>
+<testcase name="Catálogo › catálogo abre em tempo aceitável" classname="catalogo.spec.ts" time="5.833">
+</testcase>
+</testsuite>
+<testsuite name="checkout.spec.ts" timestamp="2026-11-11T18:11:17.943Z" hostname="chromium" tests="3" failures="2" skipped="0" time="13.979" errors="0">
+<testcase name="Checkout › checkout completo gera confirmação do pedido" classname="checkout.spec.ts" time="1.661">
+</testcase>
+<testcase name="Checkout › campo sobrenome aceita texto no checkout" classname="checkout.spec.ts" time="6.095">
+<system-out>
+<![CDATA[
+[[ATTACHMENT|..\test-results\checkout-Checkout-campo-sobrenome-aceita-texto-no-checkout-chromium\test-failed-1.png]]
+
+[[ATTACHMENT|..\test-results\checkout-Checkout-campo-sobrenome-aceita-texto-no-checkout-chromium\error-context.md]]
+
+[[ATTACHMENT|..\test-results\checkout-Checkout-campo-sobrenome-aceita-texto-no-checkout-chromium\trace.zip]]
+]]>
+</system-out>
+<failure message="expect(locator).toHaveValue(expected) failed" type="expect.toHaveValue">
+<![CDATA[  [chromium] › checkout.spec.ts:26:3 › Checkout › campo sobrenome aceita texto no checkout ─────────
+
+    Error: expect(locator).toHaveValue(expected) failed
+
+    Locator:  getByTestId('lastName')
+    Expected: "Lima"
+    Received: ""
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveValue" getByTestId('lastName') with timeout 5000ms
+      - waiting for getByTestId('lastName')
+        14 × locator resolved to <input value="" type="text" id="last-name" name="lastName" autocorrect="off" data-test="lastName" autocapitalize="none" aria-label="Last Name" placeholder="Last Name" class="input_error form_input"/>
+           - unexpected value ""
+
+
+      27 |     await irParaCheckout(page, "problem_user");
+      28 |     await page.getByTestId("lastName").fill("Lima");
+    > 29 |     await expect(page.getByTestId("lastName")).toHaveValue("Lima");
+         |                                                ^
+      30 |   });
+      31 |
+      32 |   test("finalizar compra conclui o pedido", async ({ page }) => {
+        at testes\e2e\checkout.spec.ts:29:48
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ..\..\test-results\checkout-Checkout-campo-sobrenome-aceita-texto-no-checkout-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ..\..\test-results\checkout-Checkout-campo-sobrenome-aceita-texto-no-checkout-chromium\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ..\..\test-results\checkout-Checkout-campo-sobrenome-aceita-texto-no-checkout-chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace ..\..\test-results\checkout-Checkout-campo-sobrenome-aceita-texto-no-checkout-chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+</testcase>
+<testcase name="Checkout › finalizar compra conclui o pedido" classname="checkout.spec.ts" time="6.223">
+<system-out>
+<![CDATA[
+[[ATTACHMENT|..\test-results\checkout-Checkout-finalizar-compra-conclui-o-pedido-chromium\test-failed-1.png]]
+
+[[ATTACHMENT|..\test-results\checkout-Checkout-finalizar-compra-conclui-o-pedido-chromium\error-context.md]]
+
+[[ATTACHMENT|..\test-results\checkout-Checkout-finalizar-compra-conclui-o-pedido-chromium\trace.zip]]
+]]>
+</system-out>
+<failure message="expect(locator).toHaveText(expected) failed" type="expect.toHaveText">
+<![CDATA[  [chromium] › checkout.spec.ts:32:3 › Checkout › finalizar compra conclui o pedido ────────────────
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator: getByTestId('complete-header')
+    Expected: "Thank you for your order!"
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toHaveText" getByTestId('complete-header') with timeout 5000ms
+      - waiting for getByTestId('complete-header')
+
+
+      35 |     await page.getByTestId("continue").click();
+      36 |     await page.getByTestId("finish").click();
+    > 37 |     await expect(page.getByTestId("complete-header")).toHaveText("Thank you for your order!", {
+         |                                                       ^
+      38 |       timeout: 5_000,
+      39 |     });
+      40 |   });
+        at testes\e2e\checkout.spec.ts:37:55
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ..\..\test-results\checkout-Checkout-finalizar-compra-conclui-o-pedido-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ..\..\test-results\checkout-Checkout-finalizar-compra-conclui-o-pedido-chromium\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ..\..\test-results\checkout-Checkout-finalizar-compra-conclui-o-pedido-chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace ..\..\test-results\checkout-Checkout-finalizar-compra-conclui-o-pedido-chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+</testcase>
+</testsuite>
+</testsuites>

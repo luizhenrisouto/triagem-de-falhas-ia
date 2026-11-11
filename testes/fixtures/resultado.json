@@ -1,0 +1,561 @@
+{
+ "config": {
+  "rootDir": "testes/e2e"
+ },
+ "suites": [
+  {
+   "title": "carrinho.spec.ts",
+   "file": "carrinho.spec.ts",
+   "column": 0,
+   "line": 0,
+   "specs": [],
+   "suites": [
+    {
+     "title": "Carrinho",
+     "file": "carrinho.spec.ts",
+     "line": 4,
+     "column": 6,
+     "specs": [
+      {
+       "title": "adicionar produto atualiza o contador do carrinho",
+       "ok": true,
+       "tags": [],
+       "tests": [
+        {
+         "timeout": 30000,
+         "annotations": [],
+         "expectedStatus": "passed",
+         "projectId": "chromium",
+         "projectName": "chromium",
+         "results": [
+          {
+           "workerIndex": 0,
+           "parallelIndex": 0,
+           "status": "passed",
+           "duration": 1380,
+           "errors": [],
+           "stdout": [],
+           "stderr": [],
+           "retry": 0,
+           "startTime": "2026-11-11T18:11:18.530Z",
+           "annotations": [],
+           "attachments": []
+          }
+         ],
+         "status": "expected"
+        }
+       ],
+       "id": "4baedac1fccd5b2d2f54-9a553853f63142a5908b",
+       "file": "carrinho.spec.ts",
+       "line": 5,
+       "column": 3
+      },
+      {
+       "title": "remover produto esvazia o carrinho",
+       "ok": false,
+       "tags": [],
+       "tests": [
+        {
+         "timeout": 30000,
+         "annotations": [],
+         "expectedStatus": "passed",
+         "projectId": "chromium",
+         "projectName": "chromium",
+         "results": [
+          {
+           "workerIndex": 0,
+           "parallelIndex": 0,
+           "status": "failed",
+           "duration": 6055,
+           "error": {
+            "message": "TimeoutError: locator.click: Timeout 5000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('remover-item')\u001b[22m\n",
+            "stack": "TimeoutError: locator.click: Timeout 5000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('remover-item')\u001b[22m\n\n    at testes\\e2e\\carrinho.spec.ts:15:44",
+            "location": {
+             "file": "testes\\e2e\\carrinho.spec.ts",
+             "column": 44,
+             "line": 15
+            },
+            "snippet": " \u001b[90m 13 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgetByTestId(\u001b[32m\"add-to-cart-sauce-labs-backpack\"\u001b[39m)\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\n \u001b[90m 14 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgetByTestId(\u001b[32m\"shopping-cart-link\"\u001b[39m)\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 15 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgetByTestId(\u001b[32m\"remover-item\"\u001b[39m)\u001b[33m.\u001b[39mclick({ timeout\u001b[33m:\u001b[39m \u001b[35m5_000\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                            \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 16 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mgetByTestId(\u001b[32m\"inventory-item\"\u001b[39m))\u001b[33m.\u001b[39mtoHaveCount(\u001b[35m0\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 17 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 18 |\u001b[39m })\u001b[33m;\u001b[39m"
+           },
+           "errors": [
+            {
+             "location": {
+              "file": "testes\\e2e\\carrinho.spec.ts",
+              "column": 44,
+              "line": 15
+             },
+             "message": "TimeoutError: locator.click: Timeout 5000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('remover-item')\u001b[22m\n\n\n  13 |     await page.getByTestId(\"add-to-cart-sauce-labs-backpack\").click();\n  14 |     await page.getByTestId(\"shopping-cart-link\").click();\n> 15 |     await page.getByTestId(\"remover-item\").click({ timeout: 5_000 });\n     |                                            ^\n  16 |     await expect(page.getByTestId(\"inventory-item\")).toHaveCount(0);\n  17 |   });\n  18 | });\n    at testes\\e2e\\carrinho.spec.ts:15:44"
+            }
+           ],
+           "stdout": [],
+           "stderr": [],
+           "retry": 0,
+           "startTime": "2026-11-11T18:11:20.201Z",
+           "annotations": [],
+           "attachments": [
+            {
+             "name": "screenshot",
+             "contentType": "image/png",
+             "path": "test-results-fixture\\carrinho-Carrinho-remover-produto-esvazia-o-carrinho-chromium\\test-failed-1.png"
+            },
+            {
+             "name": "error-context",
+             "contentType": "text/markdown",
+             "path": "test-results-fixture\\carrinho-Carrinho-remover-produto-esvazia-o-carrinho-chromium\\error-context.md"
+            },
+            {
+             "name": "trace",
+             "contentType": "application/zip",
+             "path": "test-results-fixture\\carrinho-Carrinho-remover-produto-esvazia-o-carrinho-chromium\\trace.zip"
+            }
+           ],
+           "errorLocation": {
+            "file": "testes\\e2e\\carrinho.spec.ts",
+            "column": 44,
+            "line": 15
+           }
+          }
+         ],
+         "status": "unexpected"
+        }
+       ],
+       "id": "4baedac1fccd5b2d2f54-856a718b64de208e76ee",
+       "file": "carrinho.spec.ts",
+       "line": 11,
+       "column": 3
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "title": "catalogo.spec.ts",
+   "file": "catalogo.spec.ts",
+   "column": 0,
+   "line": 0,
+   "specs": [],
+   "suites": [
+    {
+     "title": "Catálogo",
+     "file": "catalogo.spec.ts",
+     "line": 4,
+     "column": 6,
+     "specs": [
+      {
+       "title": "login mostra o catálogo de produtos",
+       "ok": true,
+       "tags": [],
+       "tests": [
+        {
+         "timeout": 30000,
+         "annotations": [],
+         "expectedStatus": "passed",
+         "projectId": "chromium",
+         "projectName": "chromium",
+         "results": [
+          {
+           "workerIndex": 1,
+           "parallelIndex": 1,
+           "status": "passed",
+           "duration": 1236,
+           "errors": [],
+           "stdout": [],
+           "stderr": [],
+           "retry": 0,
+           "startTime": "2026-11-11T18:11:18.582Z",
+           "annotations": [],
+           "attachments": []
+          }
+         ],
+         "status": "expected"
+        }
+       ],
+       "id": "d62a31f1c5e38edb5008-d877669a85278fb43dbc",
+       "file": "catalogo.spec.ts",
+       "line": 5,
+       "column": 3
+      },
+      {
+       "title": "ordenar por menor preço coloca o item mais barato primeiro",
+       "ok": true,
+       "tags": [],
+       "tests": [
+        {
+         "timeout": 30000,
+         "annotations": [],
+         "expectedStatus": "passed",
+         "projectId": "chromium",
+         "projectName": "chromium",
+         "results": [
+          {
+           "workerIndex": 1,
+           "parallelIndex": 1,
+           "status": "passed",
+           "duration": 941,
+           "errors": [],
+           "stdout": [],
+           "stderr": [],
+           "retry": 0,
+           "startTime": "2026-11-11T18:11:20.205Z",
+           "annotations": [],
+           "attachments": []
+          }
+         ],
+         "status": "expected"
+        }
+       ],
+       "id": "d62a31f1c5e38edb5008-23ef3c0859e05729f334",
+       "file": "catalogo.spec.ts",
+       "line": 11,
+       "column": 3
+      },
+      {
+       "title": "imagem de cada produto corresponde ao produto",
+       "ok": false,
+       "tags": [],
+       "tests": [
+        {
+         "timeout": 30000,
+         "annotations": [],
+         "expectedStatus": "passed",
+         "projectId": "chromium",
+         "projectName": "chromium",
+         "results": [
+          {
+           "workerIndex": 1,
+           "parallelIndex": 1,
+           "status": "failed",
+           "duration": 806,
+           "error": {
+            "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m6\u001b[39m\nReceived: \u001b[31m1\u001b[39m",
+            "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m6\u001b[39m\nReceived: \u001b[31m1\u001b[39m\n    at testes\\e2e\\catalogo.spec.ts:25:35",
+            "location": {
+             "file": "testes\\e2e\\catalogo.spec.ts",
+             "column": 35,
+             "line": 25
+            },
+            "snippet": " \u001b[90m 23 |\u001b[39m       els\u001b[33m.\u001b[39mmap((e) \u001b[33m=>\u001b[39m (e \u001b[36mas\u001b[39m \u001b[33mHTMLImageElement\u001b[39m)\u001b[33m.\u001b[39mgetAttribute(\u001b[32m\"src\"\u001b[39m))\u001b[33m,\u001b[39m\n \u001b[90m 24 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 25 |\u001b[39m     expect(\u001b[36mnew\u001b[39m \u001b[33mSet\u001b[39m(imagens)\u001b[33m.\u001b[39msize)\u001b[33m.\u001b[39mtoBe(imagens\u001b[33m.\u001b[39mlength)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                   \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 26 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 27 |\u001b[39m\n \u001b[90m 28 |\u001b[39m   test(\u001b[32m\"catálogo abre em tempo aceitável\"\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {"
+           },
+           "errors": [
+            {
+             "location": {
+              "file": "testes\\e2e\\catalogo.spec.ts",
+              "column": 35,
+              "line": 25
+             },
+             "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m6\u001b[39m\nReceived: \u001b[31m1\u001b[39m\n\n  23 |       els.map((e) => (e as HTMLImageElement).getAttribute(\"src\")),\n  24 |     );\n> 25 |     expect(new Set(imagens).size).toBe(imagens.length);\n     |                                   ^\n  26 |   });\n  27 |\n  28 |   test(\"catálogo abre em tempo aceitável\", async ({ page }) => {\n    at testes\\e2e\\catalogo.spec.ts:25:35"
+            }
+           ],
+           "stdout": [],
+           "stderr": [],
+           "retry": 0,
+           "startTime": "2026-11-11T18:11:21.162Z",
+           "annotations": [],
+           "attachments": [
+            {
+             "name": "screenshot",
+             "contentType": "image/png",
+             "path": "test-results-fixture\\catalogo-Catálogo-imagem-d-10425-duto-corresponde-ao-produto-chromium\\test-failed-1.png"
+            },
+            {
+             "name": "error-context",
+             "contentType": "text/markdown",
+             "path": "test-results-fixture\\catalogo-Catálogo-imagem-d-10425-duto-corresponde-ao-produto-chromium\\error-context.md"
+            },
+            {
+             "name": "trace",
+             "contentType": "application/zip",
+             "path": "test-results-fixture\\catalogo-Catálogo-imagem-d-10425-duto-corresponde-ao-produto-chromium\\trace.zip"
+            }
+           ],
+           "errorLocation": {
+            "file": "testes\\e2e\\catalogo.spec.ts",
+            "column": 35,
+            "line": 25
+           }
+          }
+         ],
+         "status": "unexpected"
+        }
+       ],
+       "id": "d62a31f1c5e38edb5008-874d4f21843f3b680616",
+       "file": "catalogo.spec.ts",
+       "line": 20,
+       "column": 3
+      },
+      {
+       "title": "catálogo abre em tempo aceitável",
+       "ok": true,
+       "tags": [],
+       "tests": [
+        {
+         "timeout": 30000,
+         "annotations": [],
+         "expectedStatus": "passed",
+         "projectId": "chromium",
+         "projectName": "chromium",
+         "results": [
+          {
+           "workerIndex": 3,
+           "parallelIndex": 1,
+           "status": "failed",
+           "duration": 5240,
+           "errors": [],
+           "stdout": [],
+           "stderr": [],
+           "retry": 0,
+           "startTime": "2026-11-11T18:11:22.687Z",
+           "annotations": [],
+           "attachments": [
+            {
+             "name": "screenshot",
+             "contentType": "image/png",
+             "path": "test-results-fixture/inexistente/test-failed-1.png"
+            }
+           ],
+           "error": {
+            "message": "Error: catálogo deve abrir em menos de 5165 ms\n\nexpect(received).toBeLessThan(expected)\n\nExpected: < 5165\nReceived:   5201",
+            "stack": "Error: catálogo deve abrir em menos de 5165 ms\n    at testes/e2e/catalogo.spec.ts:36:85",
+            "location": {
+             "file": "testes/e2e/catalogo.spec.ts",
+             "line": 36,
+             "column": 85
+            }
+           }
+          },
+          {
+           "workerIndex": 3,
+           "parallelIndex": 1,
+           "status": "passed",
+           "duration": 5833,
+           "errors": [],
+           "stdout": [],
+           "stderr": [],
+           "retry": 1,
+           "startTime": "2026-11-11T18:11:22.687Z",
+           "annotations": [],
+           "attachments": []
+          }
+         ],
+         "status": "flaky"
+        }
+       ],
+       "id": "d62a31f1c5e38edb5008-f6906d3ceed774b088b5",
+       "file": "catalogo.spec.ts",
+       "line": 28,
+       "column": 3
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "title": "checkout.spec.ts",
+   "file": "checkout.spec.ts",
+   "column": 0,
+   "line": 0,
+   "specs": [],
+   "suites": [
+    {
+     "title": "Checkout",
+     "file": "checkout.spec.ts",
+     "line": 17,
+     "column": 6,
+     "specs": [
+      {
+       "title": "checkout completo gera confirmação do pedido",
+       "ok": true,
+       "tags": [],
+       "tests": [
+        {
+         "timeout": 30000,
+         "annotations": [],
+         "expectedStatus": "passed",
+         "projectId": "chromium",
+         "projectName": "chromium",
+         "results": [
+          {
+           "workerIndex": 2,
+           "parallelIndex": 2,
+           "status": "passed",
+           "duration": 1661,
+           "errors": [],
+           "stdout": [],
+           "stderr": [],
+           "retry": 0,
+           "startTime": "2026-11-11T18:11:18.526Z",
+           "annotations": [],
+           "attachments": []
+          }
+         ],
+         "status": "expected"
+        }
+       ],
+       "id": "25ab1bfc84c57e3e3a45-84281cad8a207bc97349",
+       "file": "checkout.spec.ts",
+       "line": 18,
+       "column": 3
+      },
+      {
+       "title": "campo sobrenome aceita texto no checkout",
+       "ok": false,
+       "tags": [],
+       "tests": [
+        {
+         "timeout": 30000,
+         "annotations": [],
+         "expectedStatus": "passed",
+         "projectId": "chromium",
+         "projectName": "chromium",
+         "results": [
+          {
+           "workerIndex": 2,
+           "parallelIndex": 2,
+           "status": "failed",
+           "duration": 6095,
+           "error": {
+            "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveValue\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  getByTestId('lastName')\nExpected: \u001b[32m\"Lima\"\u001b[39m\nReceived: \u001b[31m\"\"\u001b[39m\nTimeout:  5000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveValue\" getByTestId('lastName') with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByTestId('lastName')\u001b[22m\n\u001b[2m    14 × locator resolved to <input value=\"\" type=\"text\" id=\"last-name\" name=\"lastName\" autocorrect=\"off\" data-test=\"lastName\" autocapitalize=\"none\" aria-label=\"Last Name\" placeholder=\"Last Name\" class=\"input_error form_input\"/>\u001b[22m\n\u001b[2m       - unexpected value \"\"\u001b[22m\n",
+            "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveValue\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  getByTestId('lastName')\nExpected: \u001b[32m\"Lima\"\u001b[39m\nReceived: \u001b[31m\"\"\u001b[39m\nTimeout:  5000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveValue\" getByTestId('lastName') with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByTestId('lastName')\u001b[22m\n\u001b[2m    14 × locator resolved to <input value=\"\" type=\"text\" id=\"last-name\" name=\"lastName\" autocorrect=\"off\" data-test=\"lastName\" autocapitalize=\"none\" aria-label=\"Last Name\" placeholder=\"Last Name\" class=\"input_error form_input\"/>\u001b[22m\n\u001b[2m       - unexpected value \"\"\u001b[22m\n\n    at testes\\e2e\\checkout.spec.ts:29:48",
+            "location": {
+             "file": "testes\\e2e\\checkout.spec.ts",
+             "column": 48,
+             "line": 29
+            },
+            "snippet": " \u001b[90m 27 |\u001b[39m     \u001b[36mawait\u001b[39m irParaCheckout(page\u001b[33m,\u001b[39m \u001b[32m\"problem_user\"\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 28 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgetByTestId(\u001b[32m\"lastName\"\u001b[39m)\u001b[33m.\u001b[39mfill(\u001b[32m\"Lima\"\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 29 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mgetByTestId(\u001b[32m\"lastName\"\u001b[39m))\u001b[33m.\u001b[39mtoHaveValue(\u001b[32m\"Lima\"\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 30 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 31 |\u001b[39m\n \u001b[90m 32 |\u001b[39m   test(\u001b[32m\"finalizar compra conclui o pedido\"\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {"
+           },
+           "errors": [
+            {
+             "location": {
+              "file": "testes\\e2e\\checkout.spec.ts",
+              "column": 48,
+              "line": 29
+             },
+             "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveValue\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  getByTestId('lastName')\nExpected: \u001b[32m\"Lima\"\u001b[39m\nReceived: \u001b[31m\"\"\u001b[39m\nTimeout:  5000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveValue\" getByTestId('lastName') with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByTestId('lastName')\u001b[22m\n\u001b[2m    14 × locator resolved to <input value=\"\" type=\"text\" id=\"last-name\" name=\"lastName\" autocorrect=\"off\" data-test=\"lastName\" autocapitalize=\"none\" aria-label=\"Last Name\" placeholder=\"Last Name\" class=\"input_error form_input\"/>\u001b[22m\n\u001b[2m       - unexpected value \"\"\u001b[22m\n\n\n  27 |     await irParaCheckout(page, \"problem_user\");\n  28 |     await page.getByTestId(\"lastName\").fill(\"Lima\");\n> 29 |     await expect(page.getByTestId(\"lastName\")).toHaveValue(\"Lima\");\n     |                                                ^\n  30 |   });\n  31 |\n  32 |   test(\"finalizar compra conclui o pedido\", async ({ page }) => {\n    at testes\\e2e\\checkout.spec.ts:29:48"
+            }
+           ],
+           "stdout": [],
+           "stderr": [],
+           "retry": 0,
+           "startTime": "2026-11-11T18:11:20.475Z",
+           "annotations": [],
+           "attachments": [
+            {
+             "name": "screenshot",
+             "contentType": "image/png",
+             "path": "test-results-fixture\\checkout-Checkout-campo-sobrenome-aceita-texto-no-checkout-chromium\\test-failed-1.png"
+            },
+            {
+             "name": "error-context",
+             "contentType": "text/markdown",
+             "path": "test-results-fixture\\checkout-Checkout-campo-sobrenome-aceita-texto-no-checkout-chromium\\error-context.md"
+            },
+            {
+             "name": "trace",
+             "contentType": "application/zip",
+             "path": "test-results-fixture\\checkout-Checkout-campo-sobrenome-aceita-texto-no-checkout-chromium\\trace.zip"
+            }
+           ],
+           "errorLocation": {
+            "file": "testes\\e2e\\checkout.spec.ts",
+            "column": 48,
+            "line": 29
+           }
+          }
+         ],
+         "status": "unexpected"
+        }
+       ],
+       "id": "25ab1bfc84c57e3e3a45-42b7c3e4de8974da3698",
+       "file": "checkout.spec.ts",
+       "line": 26,
+       "column": 3
+      },
+      {
+       "title": "finalizar compra conclui o pedido",
+       "ok": false,
+       "tags": [],
+       "tests": [
+        {
+         "timeout": 30000,
+         "annotations": [],
+         "expectedStatus": "passed",
+         "projectId": "chromium",
+         "projectName": "chromium",
+         "results": [
+          {
+           "workerIndex": 4,
+           "parallelIndex": 0,
+           "status": "failed",
+           "duration": 6223,
+           "error": {
+            "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: getByTestId('complete-header')\nExpected: \u001b[32m\"Thank you for your order!\"\u001b[39m\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toHaveText\" getByTestId('complete-header') with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByTestId('complete-header')\u001b[22m\n",
+            "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: getByTestId('complete-header')\nExpected: \u001b[32m\"Thank you for your order!\"\u001b[39m\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toHaveText\" getByTestId('complete-header') with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByTestId('complete-header')\u001b[22m\n\n    at testes\\e2e\\checkout.spec.ts:37:55",
+            "location": {
+             "file": "testes\\e2e\\checkout.spec.ts",
+             "column": 55,
+             "line": 37
+            },
+            "snippet": " \u001b[90m 35 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgetByTestId(\u001b[32m\"continue\"\u001b[39m)\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\n \u001b[90m 36 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgetByTestId(\u001b[32m\"finish\"\u001b[39m)\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 37 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mgetByTestId(\u001b[32m\"complete-header\"\u001b[39m))\u001b[33m.\u001b[39mtoHaveText(\u001b[32m\"Thank you for your order!\"\u001b[39m\u001b[33m,\u001b[39m {\n \u001b[90m    |\u001b[39m                                                       \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 38 |\u001b[39m       timeout\u001b[33m:\u001b[39m \u001b[35m5_000\u001b[39m\u001b[33m,\u001b[39m\n \u001b[90m 39 |\u001b[39m     })\u001b[33m;\u001b[39m\n \u001b[90m 40 |\u001b[39m   })\u001b[33m;\u001b[39m"
+           },
+           "errors": [
+            {
+             "location": {
+              "file": "testes\\e2e\\checkout.spec.ts",
+              "column": 55,
+              "line": 37
+             },
+             "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: getByTestId('complete-header')\nExpected: \u001b[32m\"Thank you for your order!\"\u001b[39m\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toHaveText\" getByTestId('complete-header') with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByTestId('complete-header')\u001b[22m\n\n\n  35 |     await page.getByTestId(\"continue\").click();\n  36 |     await page.getByTestId(\"finish\").click();\n> 37 |     await expect(page.getByTestId(\"complete-header\")).toHaveText(\"Thank you for your order!\", {\n     |                                                       ^\n  38 |       timeout: 5_000,\n  39 |     });\n  40 |   });\n    at testes\\e2e\\checkout.spec.ts:37:55"
+            }
+           ],
+           "stdout": [],
+           "stderr": [],
+           "retry": 0,
+           "startTime": "2026-11-11T18:11:27.190Z",
+           "annotations": [],
+           "attachments": [
+            {
+             "name": "screenshot",
+             "contentType": "image/png",
+             "path": "test-results-fixture\\checkout-Checkout-finalizar-compra-conclui-o-pedido-chromium\\test-failed-1.png"
+            },
+            {
+             "name": "error-context",
+             "contentType": "text/markdown",
+             "path": "test-results-fixture\\checkout-Checkout-finalizar-compra-conclui-o-pedido-chromium\\error-context.md"
+            },
+            {
+             "name": "trace",
+             "contentType": "application/zip",
+             "path": "test-results-fixture\\checkout-Checkout-finalizar-compra-conclui-o-pedido-chromium\\trace.zip"
+            }
+           ],
+           "errorLocation": {
+            "file": "testes\\e2e\\checkout.spec.ts",
+            "column": 55,
+            "line": 37
+           }
+          }
+         ],
+         "status": "unexpected"
+        }
+       ],
+       "id": "25ab1bfc84c57e3e3a45-9361ea8b71d7ae129f9c",
+       "file": "checkout.spec.ts",
+       "line": 32,
+       "column": 3
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "errors": [],
+ "stats": {
+  "startTime": "2026-11-11T18:11:17.911Z",
+  "duration": 15858.666000000001,
+  "expected": 5,
+  "skipped": 0,
+  "unexpected": 4,
+  "flaky": 0
+ }
+}
