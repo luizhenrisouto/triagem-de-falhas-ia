@@ -30,7 +30,7 @@
         Todo dia, uma suíte de testes roda contra o <a href="https://www.saucedemo.com">SauceDemo</a>, uma loja feita para treino de QA.
         Algumas falhas foram plantadas de propósito, com a resposta certa guardada em
         <a href="https://github.com/luizhenrisouto/triagem-de-falhas-ia/blob/main/testes/gabarito.json">um gabarito</a>.
-        Cada falha vai para um fluxo no n8n, o Claude decide a causa e, quando é defeito, abre ou atualiza uma issue sem repetir.
+        Cada falha vai para um fluxo no n8n, a IA (Gemini, ou Claude se configurado) decide a causa e, quando é defeito, abre ou atualiza uma issue sem repetir.
       </p>
       <ul class="legenda" aria-label="Legenda das cores">
         <li><span class="ponto aprovado"></span>passou</li>
@@ -52,7 +52,7 @@
       Horas economizadas: cada falha triada vale 30 minutos de triagem manual (estimativa do autor, a partir da experiência como QA),
       menos o tempo real que a automação levou. Custo calculado com os tokens de cada chamada.
     </p>
-    <p>Feito por Luiz Henri Souto com n8n, Claude, Playwright e GitHub Actions.</p>
+    <p>Feito por Luiz Henri Souto com n8n, Gemini (ou Claude), Playwright e GitHub Actions.</p>
   </footer>
 
   <script src="app.js"></script>
