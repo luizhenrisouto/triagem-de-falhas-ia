@@ -52,6 +52,8 @@ export type ResumoExecucao = {
   minutosManuaisEstimados: number;
   minutosEconomizados: number;
   issues: { criadas: number; atualizadas: number; reabertas: number };
+  /** Links das issues ligadas às falhas desta execução (criadas, atualizadas ou reabertas). */
+  issueUrls: string[];
   resultados: ResultadoTriagem[];
 };
 

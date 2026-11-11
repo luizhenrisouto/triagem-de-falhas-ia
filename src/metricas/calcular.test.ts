@@ -63,6 +63,7 @@ describe("calcularResumo", () => {
     expect(r.custoUsd).toBeCloseTo(0.05);
     expect(r.duracaoMediaTriagemMs).toBe(3000);
     expect(r.issues).toEqual({ criadas: 1, atualizadas: 1, reabertas: 1 });
+    expect(r.issueUrls).toEqual([]);
     expect(r.acertoGabaritoPct).toBeNull();
     expect(r.id).toBe("7");
     expect(r.data).toBe(execucao.dataIso);
@@ -73,6 +74,11 @@ describe("calcularResumo", () => {
     expect(r.custoUsd).toBeCloseTo(0.02);
     expect(r.custoIncompleto).toBe(true);
     expect(calcularResumo({ ...base, resultados: [resultado("bug_produto")] }).custoIncompleto).toBe(false);
+  });
+
+  test("guarda os links das issues ligadas a esta execução, sem repetir", () => {
+    const r = calcularResumo({ ...base, resultados: [resultado("bug_produto", { acaoIssue: "atualizada", issueUrl: "u/1" }), resultado("bug_produto", { acaoIssue: "criada", issueUrl: "u/2" }), resultado("teste_instavel")] });
+    expect(r.issueUrls).toEqual(["u/1", "u/2"]);
   });
 
   test("sem falhas: zeros e nulos", () => {

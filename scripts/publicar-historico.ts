@@ -37,7 +37,8 @@ function calcularTotais(execucoes: ExecucaoNoIndice[]): Indice["totais"] {
     custoTotalUsd: soma((e) => e.custoUsd),
     custoIncompleto: execucoes.some((e) => e.custoIncompleto),
     horasEconomizadas: (distintas * MINUTOS_MANUAIS_POR_FALHA - minutosAutomacao) / 60,
-    issuesAbertas: soma((e) => e.issues.criadas),
+    // Issues diferentes que a triagem abriu e mantém, em todo o histórico.
+    issuesAbertas: new Set(execucoes.flatMap((e) => e.issueUrls ?? [])).size,
   };
 }
 

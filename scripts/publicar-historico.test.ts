@@ -13,7 +13,7 @@ function resumo(id: string, data: string, extra: Partial<ResumoExecucao> = {}): 
     totalTestes: 9, aprovados: 5, falhas: 4,
     porCategoria: { bug_produto: 2, teste_instavel: 1, teste_quebrado: 1 },
     acertoGabaritoPct: 100, acertosGabarito: 4, totalComGabarito: 4, idsTriados: ["a", "b", "c", "d"],
-    duracaoMediaTriagemMs: 3000, custoUsd: 0.1, custoIncompleto: false,
+    duracaoMediaTriagemMs: 3000, custoUsd: 0.1, custoIncompleto: false, issueUrls: ["u/1", "u/2", "u/3"],
     minutosManuaisEstimados: 120, minutosEconomizados: 119.8,
     issues: { criadas: 3, atualizadas: 0, reabertas: 0 },
     resultados: [{ falhaId: "a", titulo: "t", triagem: null, erroTriagem: null, acaoIssue: "nenhuma", issueUrl: null, erroIssue: null, tokensEntrada: 1, tokensSaida: 1, custoUsd: 0, duracaoTriagemMs: 0 }],
@@ -62,7 +62,8 @@ describe("publicarHistorico", () => {
     expect(indice.totais.falhasDistintas).toBe(4);
     expect(indice.totais.horasEconomizadas).toBeCloseTo((4 * 30 - 3 * 0.2) / 60);
     expect(indice.totais.custoIncompleto).toBe(false);
-    expect(indice.totais.issuesAbertas).toBe(4);
+    // issues diferentes ligadas à triagem em todo o histórico (as mesmas 3 nas 3 execuções)
+    expect(indice.totais.issuesAbertas).toBe(3);
   });
 
   test("falhas sem triagem não contam como triadas", () => {

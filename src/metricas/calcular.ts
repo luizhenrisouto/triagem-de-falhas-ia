@@ -45,6 +45,7 @@ export function calcularResumo(entrada: {
       atualizadas: contar((r) => r.acaoIssue === "atualizada"),
       reabertas: contar((r) => r.acaoIssue === "reaberta"),
     },
+    issueUrls: [...new Set(resultados.map((r) => r.issueUrl).filter((u): u is string => Boolean(u)))],
     resultados,
   };
 }
