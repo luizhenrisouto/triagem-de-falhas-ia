@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Triagem de falhas com IA</title>
-  <meta name="description" content="Resultados reais de uma triagem automática de falhas de teste com n8n e Claude.">
+  <meta name="description" content="Resultados reais de uma triagem automática de falhas de teste com n8n e IA (Gemini ou Claude).">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
@@ -49,8 +49,9 @@
 
   <footer class="rodape">
     <p>
-      Horas economizadas: cada falha triada vale 30 minutos de triagem manual (estimativa do autor, a partir da experiência como QA),
-      menos o tempo real que a automação levou. Custo calculado com os tokens de cada chamada.
+      Horas economizadas: cada falha diferente triada vale 30 minutos de triagem manual (estimativa do autor, a partir da experiência como QA),
+      contada uma vez só, mesmo que a falha se repita em vários dias, menos todo o tempo que a automação levou.
+      Acerto: falhas com a categoria certa sobre todas as falhas do gabarito, somando as execuções. Custo calculado com os tokens de cada chamada.
     </p>
     <p>Feito por Luiz Henri Souto com n8n, Gemini (ou Claude), Playwright e GitHub Actions.</p>
   </footer>
