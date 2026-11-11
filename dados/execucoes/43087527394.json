@@ -1,6 +1,6 @@
 {
   "id": "43087527394",
-  "data": "2026-11-11T19:31:04.635Z",
+  "data": "2026-11-11T19:48:06.730Z",
   "url": "https://github.com/luizhenrisouto/triagem-de-falhas-ia/actions/runs/43087527394",
   "commit": "c791afcb71cd17525510d495d1c34804c96cdfc6",
   "modelo": "gemini-3.8-flash",
@@ -27,53 +27,53 @@
       "falhaId": "5a048fa577ca",
       "titulo": "carrinho.spec.ts > Carrinho > remover produto esvazia o carrinho",
       "triagem": null,
-      "erroTriagem": "Erro da API (HTTP 403): PERMISSION_DENIED - Permission denied on the service.",
+      "erroTriagem": "Erro da API (HTTP 503): UNAVAILABLE - This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.",
       "acaoIssue": "nenhuma",
       "issueUrl": null,
       "erroIssue": null,
       "tokensEntrada": 0,
       "tokensSaida": 0,
       "custoUsd": 0,
-      "duracaoTriagemMs": 3084
+      "duracaoTriagemMs": 48021
     },
     {
       "falhaId": "8728c72772d0",
       "titulo": "catalogo.spec.ts > Catálogo > imagem de cada produto corresponde ao produto",
       "triagem": null,
-      "erroTriagem": "Erro da API (HTTP 403): PERMISSION_DENIED - Permission denied on the service.",
+      "erroTriagem": "Erro da API (HTTP ECONNABORTED): erro - timeout of 180000ms exceeded",
       "acaoIssue": "nenhuma",
       "issueUrl": null,
       "erroIssue": null,
       "tokensEntrada": 0,
       "tokensSaida": 0,
       "custoUsd": 0,
-      "duracaoTriagemMs": 3084
+      "duracaoTriagemMs": 48021
     },
     {
       "falhaId": "5eec75cf73c3",
       "titulo": "checkout.spec.ts > Checkout > campo sobrenome aceita texto no checkout",
       "triagem": null,
-      "erroTriagem": "Erro da API (HTTP 403): PERMISSION_DENIED - Method doesn't allow unregistered callers (callers without established identity). Please use API Key or other form of API consumer identity to call this API.",
+      "erroTriagem": "Erro da API (HTTP ECONNABORTED): erro - timeout of 180000ms exceeded",
       "acaoIssue": "nenhuma",
       "issueUrl": null,
       "erroIssue": null,
       "tokensEntrada": 0,
       "tokensSaida": 0,
       "custoUsd": 0,
-      "duracaoTriagemMs": 3084
+      "duracaoTriagemMs": 48021
     },
     {
       "falhaId": "e9aaf5aae52d",
       "titulo": "checkout.spec.ts > Checkout > finalizar compra conclui o pedido",
       "triagem": null,
-      "erroTriagem": "Erro da API (HTTP 403): PERMISSION_DENIED - Permission denied on the service.",
+      "erroTriagem": "Erro da API (HTTP ECONNABORTED): erro - timeout of 180000ms exceeded",
       "acaoIssue": "nenhuma",
       "issueUrl": null,
       "erroIssue": null,
       "tokensEntrada": 0,
       "tokensSaida": 0,
       "custoUsd": 0,
-      "duracaoTriagemMs": 3084
+      "duracaoTriagemMs": 48021
     }
   ]
 }
