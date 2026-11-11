@@ -1,0 +1,8 @@
+node_modules/
+test-results/
+relatorios/
+playwright-report/
+.n8n/
+.env
+.superpowers/
+publicacao/
