@@ -1,0 +1,30 @@
+name: Vigia da triagem
+
+# De hora em hora: cancela execuções presas, dispara outra e abre um alerta (issue "vigia") se a triagem parar de dar certo.
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  issues: write
+  contents: read
+
+jobs:
+  vigiar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts/vigia.mjs
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - name: Verificar a triagem
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/vigia.mjs

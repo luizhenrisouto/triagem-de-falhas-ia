@@ -69,6 +69,11 @@ Se a empresa já tem um n8n hospedado, importe `n8n/fluxo.json` nele e use `N8N_
 | `ISSUE_RODAPE` | variável de ambiente | vazio | texto extra no fim de cada issue |
 | `LIMITE_CATALOGO_MS` | variável | `5165` | calibra o teste instável da demonstração |
 
+## O que acontece quando algo trava
+
+- Cada etapa tem limite de tempo: subir o n8n (5 min), enviar ao n8n (10 min), job de triagem (30 min), publicação (10 min). A IA tem até 5 tentativas por falha quando está ocupada.
+- Um **vigia** ([`.github/workflows/vigia.yml`](.github/workflows/vigia.yml)) roda de hora em hora: cancela execução presa na fila há mais de 30 min ou rodando há mais de 60, dispara outra, e abre uma issue com o rótulo `vigia` se a última execução falhou ou se nenhuma deu certo nas últimas 26 h. Quando tudo volta ao normal, ele comenta e fecha o alerta.
+
 ## Rodar localmente
 
 Requer Node 24.
@@ -91,7 +96,7 @@ npm run n8n:local        # abre o fluxo no editor do n8n em http://localhost:567
 
 ## Como foi testado
 
-- 76 testes unitários (leitura de relatórios, impressão digital da falha, chamadas às duas IAs, tratamento de recusa, JSON inválido, erro 503 e cota, decisão das issues, menções neutralizadas, métricas e histórico)
+- 86 testes unitários (leitura de relatórios, impressão digital da falha, chamadas às duas IAs, tratamento de recusa, JSON inválido, erro 503 e cota, decisão das issues, menções neutralizadas, métricas, histórico e as decisões do vigia)
 - 8 testes de integração que sobem um n8n de verdade com servidores falsos: criar, não duplicar, reabrir, erro isolado, troca de provedor, nova tentativa por falha quando a IA está ocupada e nenhuma issue criada quando a listagem do GitHub falha
 
 ---
