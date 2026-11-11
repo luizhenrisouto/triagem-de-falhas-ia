@@ -117,12 +117,15 @@
           "response": {
             "response": {
               "fullResponse": true,
-              "neverError": true
+              "neverError": false
             }
           },
-          "timeout": 180000
+          "timeout": 60000
         }
-      }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
     },
     {
       "id": "c1a1e7d0-0005-4000-8000-000000000005",
@@ -429,12 +432,15 @@
           "response": {
             "response": {
               "fullResponse": true,
-              "neverError": true
+              "neverError": false
             }
           },
-          "timeout": 180000
+          "timeout": 60000
         }
-      }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
     },
     {
       "id": "c1a1e7d0-0021-4000-8000-000000000021",

@@ -137,4 +137,17 @@ describe("fluxo n8n", () => {
     expect(chamada.headers["x-goog-api-key"]).toBe("chave-gemini-falsa");
     expect(chamada.headers["x-api-key"]).toBeUndefined();
   }, 120_000);
+
+  test("provedor ocupado (503) é tentado de novo e a triagem sai", async () => {
+    let tentativas = 0;
+    const normal = (c: Chamada) => ({
+      status: 200,
+      corpo: { candidates: [{ content: { parts: [{ text: JSON.stringify(triagem("teste_instavel")) }] }, finishReason: "STOP" }], usageMetadata: { promptTokenCount: 80, candidatesTokenCount: 40 } },
+    });
+    gemini.trocarResposta((c) => (++tentativas === 1 ? { status: 503, corpo: { error: { code: 503, status: "UNAVAILABLE", message: "high demand" } } } : normal(c)));
+    const { resultados } = await enviar([FALHAS[1]], "gemini-3.8-flash");
+    expect(tentativas).toBe(2);
+    expect(resultados[0].erroTriagem).toBeNull();
+    expect(resultados[0].triagem.categoria).toBe("teste_instavel");
+  }, 120_000);
 });
