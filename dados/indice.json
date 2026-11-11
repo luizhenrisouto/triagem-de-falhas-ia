@@ -1,14 +1,39 @@
 {
-  "atualizadoEm": "2026-11-11T20:05:21.257Z",
+  "atualizadoEm": "2026-11-11T20:09:18.732Z",
   "totais": {
-    "execucoes": 4,
-    "falhasTriadas": 4,
-    "acertoMedioPct": 25,
+    "execucoes": 5,
+    "falhasTriadas": 8,
+    "acertoMedioPct": 36,
     "custoTotalUsd": 0,
-    "horasEconomizadas": 1.9958722222222223,
+    "horasEconomizadas": 3.9915322222222227,
     "issuesAbertas": 4
   },
   "execucoes": [
+    {
+      "id": "43093338714",
+      "data": "2026-11-11T20:08:56.437Z",
+      "url": "https://github.com/luizhenrisouto/triagem-de-falhas-ia/actions/runs/43093338714",
+      "commit": "9a741ab886dd1ca107c6c2602099126d14c350c1",
+      "modelo": "gemini-3.5-flash-lite",
+      "totalTestes": 9,
+      "aprovados": 4,
+      "falhas": 5,
+      "porCategoria": {
+        "bug_produto": 2,
+        "teste_instavel": 1,
+        "teste_quebrado": 1
+      },
+      "acertoGabaritoPct": 80,
+      "duracaoMediaTriagemMs": 3906,
+      "custoUsd": 0,
+      "minutosManuaisEstimados": 120,
+      "minutosEconomizados": 119.7396,
+      "issues": {
+        "criadas": 0,
+        "atualizadas": 3,
+        "reabertas": 0
+      }
+    },
     {
       "id": "43091781210",
       "data": "2026-11-11T20:05:03.780Z",
