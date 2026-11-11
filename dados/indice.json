@@ -1,7 +1,7 @@
 {
-  "atualizadoEm": "2026-11-11T19:10:42.561Z",
+  "atualizadoEm": "2026-11-11T19:16:08.285Z",
   "totais": {
-    "execucoes": 1,
+    "execucoes": 2,
     "falhasTriadas": 0,
     "acertoMedioPct": 0,
     "custoTotalUsd": 0,
@@ -9,6 +9,31 @@
     "issuesAbertas": 0
   },
   "execucoes": [
+    {
+      "id": "43085135825",
+      "data": "2026-11-11T19:16:06.258Z",
+      "url": "https://github.com/luizhenrisouto/triagem-de-falhas-ia/actions/runs/43085135825",
+      "commit": "0fa4d2802d2a5f8f6fc5b223810fe5bc7c892c9e",
+      "modelo": "claude-opus-5-5",
+      "totalTestes": 9,
+      "aprovados": 5,
+      "falhas": 4,
+      "porCategoria": {
+        "bug_produto": 0,
+        "teste_instavel": 0,
+        "teste_quebrado": 0
+      },
+      "acertoGabaritoPct": 0,
+      "duracaoMediaTriagemMs": null,
+      "custoUsd": 0,
+      "minutosManuaisEstimados": 0,
+      "minutosEconomizados": 0,
+      "issues": {
+        "criadas": 0,
+        "atualizadas": 0,
+        "reabertas": 0
+      }
+    },
     {
       "id": "43083827582",
       "data": "2026-11-11T19:10:40.602Z",

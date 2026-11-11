@@ -1,0 +1,79 @@
+{
+  "id": "43085135825",
+  "data": "2026-11-11T19:16:06.258Z",
+  "url": "https://github.com/luizhenrisouto/triagem-de-falhas-ia/actions/runs/43085135825",
+  "commit": "0fa4d2802d2a5f8f6fc5b223810fe5bc7c892c9e",
+  "modelo": "claude-opus-5-5",
+  "totalTestes": 9,
+  "aprovados": 5,
+  "falhas": 4,
+  "porCategoria": {
+    "bug_produto": 0,
+    "teste_instavel": 0,
+    "teste_quebrado": 0
+  },
+  "acertoGabaritoPct": 0,
+  "duracaoMediaTriagemMs": null,
+  "custoUsd": 0,
+  "minutosManuaisEstimados": 0,
+  "minutosEconomizados": 0,
+  "issues": {
+    "criadas": 0,
+    "atualizadas": 0,
+    "reabertas": 0
+  },
+  "resultados": [
+    {
+      "falhaId": "5a048fa577ca",
+      "titulo": "carrinho.spec.ts > Carrinho > remover produto esvazia o carrinho",
+      "triagem": null,
+      "erroTriagem": "Erro da API (HTTP 401): authentication_error - x-api-key header is required",
+      "acaoIssue": "nenhuma",
+      "issueUrl": null,
+      "erroIssue": null,
+      "tokensEntrada": 0,
+      "tokensSaida": 0,
+      "custoUsd": 0,
+      "duracaoTriagemMs": 47
+    },
+    {
+      "falhaId": "8728c72772d0",
+      "titulo": "catalogo.spec.ts > Catálogo > imagem de cada produto corresponde ao produto",
+      "triagem": null,
+      "erroTriagem": "Erro da API (HTTP 401): authentication_error - x-api-key header is required",
+      "acaoIssue": "nenhuma",
+      "issueUrl": null,
+      "erroIssue": null,
+      "tokensEntrada": 0,
+      "tokensSaida": 0,
+      "custoUsd": 0,
+      "duracaoTriagemMs": 47
+    },
+    {
+      "falhaId": "5eec75cf73c3",
+      "titulo": "checkout.spec.ts > Checkout > campo sobrenome aceita texto no checkout",
+      "triagem": null,
+      "erroTriagem": "Erro da API (HTTP 401): authentication_error - x-api-key header is required",
+      "acaoIssue": "nenhuma",
+      "issueUrl": null,
+      "erroIssue": null,
+      "tokensEntrada": 0,
+      "tokensSaida": 0,
+      "custoUsd": 0,
+      "duracaoTriagemMs": 47
+    },
+    {
+      "falhaId": "e9aaf5aae52d",
+      "titulo": "checkout.spec.ts > Checkout > finalizar compra conclui o pedido",
+      "triagem": null,
+      "erroTriagem": "Erro da API (HTTP 401): authentication_error - x-api-key header is required",
+      "acaoIssue": "nenhuma",
+      "issueUrl": null,
+      "erroIssue": null,
+      "tokensEntrada": 0,
+      "tokensSaida": 0,
+      "custoUsd": 0,
+      "duracaoTriagemMs": 47
+    }
+  ]
+}
