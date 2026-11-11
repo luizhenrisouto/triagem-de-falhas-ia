@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Triagem de falhas com IA</title>
+  <meta name="description" content="Resultados reais de uma triagem automática de falhas de teste com n8n e Claude.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+  <header class="topo">
+    <p class="projeto">Triagem de falhas com IA</p>
+    <nav>
+      <a href="https://github.com/luizhenrisouto/triagem-de-falhas-ia">Código no GitHub</a>
+      <a href="https://github.com/luizhenrisouto/triagem-de-falhas-ia/issues?q=label%3Atriagem-ia">Issues abertas pela IA</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="abertura" aria-live="polite">
+      <h1 id="frase">Carregando os resultados…</h1>
+      <p id="subfrase" class="subfrase"></p>
+    </section>
+
+    <section class="como-ler">
+      <p>
+        Todo dia, uma suíte de testes roda contra o <a href="https://www.saucedemo.com">SauceDemo</a>, uma loja feita para treino de QA.
+        Algumas falhas foram plantadas de propósito, com a resposta certa guardada em
+        <a href="https://github.com/luizhenrisouto/triagem-de-falhas-ia/blob/main/testes/gabarito.json">um gabarito</a>.
+        Cada falha vai para um fluxo no n8n, o Claude decide a causa e, quando é defeito, abre ou atualiza uma issue sem repetir.
+      </p>
+      <ul class="legenda" aria-label="Legenda das cores">
+        <li><span class="ponto aprovado"></span>passou</li>
+        <li><span class="ponto bug_produto"></span>bug do produto</li>
+        <li><span class="ponto teste_instavel"></span>teste instável</li>
+        <li><span class="ponto teste_quebrado"></span>teste quebrado</li>
+        <li><span class="ponto erro"></span>sem triagem</li>
+      </ul>
+    </section>
+
+    <section class="execucoes">
+      <h2>Execuções</h2>
+      <ol id="lista" class="lista"></ol>
+    </section>
+  </main>
+
+  <footer class="rodape">
+    <p>
+      Horas economizadas: cada falha triada vale 30 minutos de triagem manual (estimativa do autor, a partir da experiência como QA),
+      menos o tempo real que a automação levou. Custo calculado com os tokens de cada chamada.
+    </p>
+    <p>Feito por Luiz Henri Souto com n8n, Claude, Playwright e GitHub Actions.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
