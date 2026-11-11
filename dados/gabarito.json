@@ -1,0 +1,7 @@
+{
+  "catalogo.spec.ts > Catálogo > imagem de cada produto corresponde ao produto": "bug_produto",
+  "checkout.spec.ts > Checkout > campo sobrenome aceita texto no checkout": "bug_produto",
+  "checkout.spec.ts > Checkout > finalizar compra conclui o pedido": "bug_produto",
+  "catalogo.spec.ts > Catálogo > catálogo abre em tempo aceitável": "teste_instavel",
+  "carrinho.spec.ts > Carrinho > remover produto esvazia o carrinho": "teste_quebrado"
+}
