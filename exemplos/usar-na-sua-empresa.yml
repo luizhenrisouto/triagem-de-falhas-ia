@@ -1,0 +1,56 @@
+# Exemplo mínimo para usar a triagem com IA numa suíte que já existe.
+# Copie para .github/workflows/ junto com as pastas n8n/, scripts/, src/ e prompts/ deste repositório.
+name: Triagem de falhas com IA
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  triagem:
+    runs-on: ubuntu-latest
+    env:
+      MODELO_IA: ${{ vars.MODELO_IA || 'gemini-3.5-flash-lite' }}
+      N8N_URL: http://127.0.0.1:5678
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+
+      # 1) TROQUE pelo comando da sua suíte. Ele precisa gerar um JUnit XML
+      #    (ou o JSON do Playwright). As falhas não devem derrubar o job.
+      - name: Rodar a sua suíte
+        continue-on-error: true
+        run: mvn test # exemplo: gera target/surefire-reports/TEST-*.xml
+
+      # Se a ferramenta gera vários XML, junte num só (ou chame o envio uma vez por arquivo).
+      - name: Subir o n8n com o fluxo de triagem
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          npm run fluxo:montar
+          nohup npx tsx scripts/subir-n8n.ts > n8n.log 2>&1 &
+          for i in $(seq 1 150); do grep -q "n8n pronto" n8n.log && exit 0; sleep 2; done
+          cat n8n.log; exit 1
+
+      # 2) TROQUE o caminho do relatório.
+      - name: Triar as falhas
+        run: npx tsx scripts/enviar-para-n8n.ts --relatorio caminho/do/relatorio.xml --saida relatorios/resumo.json
+
+      - name: Guardar o resumo
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: triagem-${{ github.run_id }}
+          path: relatorios/resumo.json
+          if-no-files-found: ignore
