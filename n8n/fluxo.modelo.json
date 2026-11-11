@@ -76,8 +76,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        880,
-        200
+        1100,
+        420
       ],
       "onError": "continueRegularOutput",
       "parameters": {
@@ -108,12 +108,6 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify($json.requisicao) }}",
         "options": {
-          "batching": {
-            "batch": {
-              "batchSize": 1,
-              "batchInterval": 0
-            }
-          },
           "response": {
             "response": {
               "fullResponse": true,
@@ -133,7 +127,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1320,
+        1540,
         300
       ],
       "parameters": {
@@ -147,7 +141,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1540,
+        1760,
         300
       ],
       "parameters": {
@@ -161,7 +155,7 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
       "position": [
-        1760,
+        1980,
         300
       ],
       "parameters": {
@@ -177,7 +171,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2000,
+        2220,
         60
       ],
       "onError": "continueRegularOutput",
@@ -200,7 +194,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2000,
+        2220,
         240
       ],
       "onError": "continueRegularOutput",
@@ -223,7 +217,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2000,
+        2220,
         420
       ],
       "onError": "continueRegularOutput",
@@ -246,7 +240,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2220,
+        2440,
         420
       ],
       "onError": "continueRegularOutput",
@@ -269,7 +263,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2440,
+        2660,
         60
       ],
       "parameters": {
@@ -283,7 +277,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2440,
+        2660,
         240
       ],
       "parameters": {
@@ -297,7 +291,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2440,
+        2660,
         420
       ],
       "parameters": {
@@ -311,7 +305,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2440,
+        2660,
         600
       ],
       "parameters": {
@@ -325,7 +319,7 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        2660,
+        2880,
         300
       ],
       "parameters": {
@@ -338,7 +332,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2880,
+        3100,
         300
       ],
       "parameters": {
@@ -352,7 +346,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        3100,
+        3320,
         300
       ],
       "parameters": {
@@ -366,7 +360,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        660,
+        880,
         300
       ],
       "parameters": {
@@ -399,8 +393,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        880,
-        400
+        1100,
+        200
       ],
       "onError": "continueRegularOutput",
       "parameters": {
@@ -423,12 +417,6 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify($json.requisicao) }}",
         "options": {
-          "batching": {
-            "batch": {
-              "batchSize": 1,
-              "batchInterval": 4000
-            }
-          },
           "response": {
             "response": {
               "fullResponse": true,
@@ -443,16 +431,31 @@
       "waitBetweenTries": 5000
     },
     {
-      "id": "c1a1e7d0-0021-4000-8000-000000000021",
-      "name": "Juntar respostas",
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 3.2,
+      "id": "c1a1e7d0-0022-4000-8000-000000000022",
+      "name": "Uma falha por vez",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
       "position": [
-        1100,
+        660,
         300
       ],
       "parameters": {
-        "numberInputs": 2
+        "batchSize": 1,
+        "options": {}
+      }
+    },
+    {
+      "id": "c1a1e7d0-0023-4000-8000-000000000023",
+      "name": "Pausa do limite gratuito",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1320,
+        200
+      ],
+      "webhookId": "5f0c7b2e-7a43-4d1e-9c2a-0d1a6e7f0023",
+      "parameters": {
+        "amount": "={{ Number($env.PAUSA_GEMINI_S ?? 4) }}"
       }
     }
   ],
@@ -483,7 +486,7 @@
       "main": [
         [
           {
-            "node": "Qual provedor?",
+            "node": "Uma falha por vez",
             "type": "main",
             "index": 0
           }
@@ -494,9 +497,9 @@
       "main": [
         [
           {
-            "node": "Juntar respostas",
+            "node": "Uma falha por vez",
             "type": "main",
-            "index": 1
+            "index": 0
           }
         ]
       ]
@@ -687,18 +690,36 @@
       "main": [
         [
           {
-            "node": "Juntar respostas",
+            "node": "Pausa do limite gratuito",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Juntar respostas": {
+    "Uma falha por vez": {
       "main": [
         [
           {
             "node": "Interpretar triagem",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Qual provedor?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pausa do limite gratuito": {
+      "main": [
+        [
+          {
+            "node": "Uma falha por vez",
             "type": "main",
             "index": 0
           }

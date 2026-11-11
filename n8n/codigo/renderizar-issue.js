@@ -9,9 +9,27 @@ const NOME_CATEGORIA = {
   teste_instavel: "Teste instável",
 };
 
-/** Título, corpo (Markdown) e rótulos da issue. `ocorrenciasAnteriores` = contador lido da issue existente (0 se nova). */
-function renderizarIssue(falha, triagem, execucao, ocorrenciasAnteriores) {
+/** Impede que texto escrito pela IA mencione (e notifique) pessoas ou times no GitHub. */
+function semMencoes(texto) {
+  return String(texto ?? "").replace(/@(?=[\w-])/g, "@​");
+}
+
+/**
+ * Título, corpo (Markdown) e rótulos da issue.
+ * `ocorrenciasAnteriores` = contador lido da issue existente (0 se nova).
+ * `opcoes.prefixoTitulo` e `opcoes.rodape`: textos do projeto (vazios por padrão).
+ */
+function renderizarIssue(falha, triagemOriginal, execucao, ocorrenciasAnteriores, opcoes = {}) {
   const ocorrencias = (ocorrenciasAnteriores || 0) + 1;
+  const triagem = {
+    ...triagemOriginal,
+    resumo: semMencoes(triagemOriginal.resumo),
+    passos: (triagemOriginal.passos || []).map(semMencoes),
+    esperado: semMencoes(triagemOriginal.esperado),
+    obtido: semMencoes(triagemOriginal.obtido),
+    causaProvavel: semMencoes(triagemOriginal.causaProvavel),
+    sugestaoCorrecao: semMencoes(triagemOriginal.sugestaoCorrecao),
+  };
   const quebrado = triagem.categoria === "teste_quebrado";
   const corpo = [
     `**${NOME_CATEGORIA[triagem.categoria]}** · confiança da IA: ${Math.round(triagem.confianca * 100)}%`,
@@ -36,12 +54,12 @@ function renderizarIssue(falha, triagem, execucao, ocorrenciasAnteriores) {
     "---",
     `Ocorrências: ${ocorrencias} · Última ocorrência: ${execucao.data} ([execução ${execucao.id}](${execucao.url}), print e trace nos artefatos)`,
     "",
-    "> Issue aberta automaticamente pela triagem com IA. Esta falha foi plantada de propósito na demonstração (SauceDemo); o gabarito está em `testes/gabarito.json`.",
+    `> Issue aberta automaticamente pela triagem com IA.${opcoes.rodape ? ` ${opcoes.rodape}` : ""}`,
     "",
     `<!-- triagem-ia:fp=${falha.id} -->`,
     `<!-- triagem-ia:ocorrencias=${ocorrencias} -->`,
   ].join("\n");
-  return { titulo: `[SauceDemo] ${triagem.resumo}`, corpo, rotulos: ["triagem-ia", triagem.categoria] };
+  return { titulo: `${opcoes.prefixoTitulo ?? ""}${triagem.resumo}`, corpo, rotulos: ["triagem-ia", triagem.categoria] };
 }
 
 if (typeof module !== "undefined") module.exports = { renderizarIssue, lerOcorrencias };

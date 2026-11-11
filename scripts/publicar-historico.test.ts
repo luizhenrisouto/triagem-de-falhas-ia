@@ -12,7 +12,8 @@ function resumo(id: string, data: string, extra: Partial<ResumoExecucao> = {}): 
     id, data, url: `https://x/${id}`, commit: "c", modelo: "claude-opus-5-5",
     totalTestes: 9, aprovados: 5, falhas: 4,
     porCategoria: { bug_produto: 2, teste_instavel: 1, teste_quebrado: 1 },
-    acertoGabaritoPct: 100, duracaoMediaTriagemMs: 3000, custoUsd: 0.1,
+    acertoGabaritoPct: 100, acertosGabarito: 4, totalComGabarito: 4, idsTriados: ["a", "b", "c", "d"],
+    duracaoMediaTriagemMs: 3000, custoUsd: 0.1, custoIncompleto: false,
     minutosManuaisEstimados: 120, minutosEconomizados: 119.8,
     issues: { criadas: 3, atualizadas: 0, reabertas: 0 },
     resultados: [{ falhaId: "a", titulo: "t", triagem: null, erroTriagem: null, acaoIssue: "nenhuma", issueUrl: null, erroIssue: null, tokensEntrada: 1, tokensSaida: 1, custoUsd: 0, duracaoTriagemMs: 0 }],
@@ -48,15 +49,19 @@ describe("publicarHistorico", () => {
   test("adiciona execuções, ordena da mais nova e recalcula totais", () => {
     const { indice } = preparar([
       resumo("1", "2026-11-12T11:00:00.000Z"),
-      resumo("2", "2026-11-14T11:00:00.000Z", { acertoGabaritoPct: 80, issues: { criadas: 0, atualizadas: 3, reabertas: 0 } }),
-      resumo("3", "2026-11-13T11:00:00.000Z", { acertoGabaritoPct: 60, issues: { criadas: 1, atualizadas: 2, reabertas: 1 } }),
+      resumo("2", "2026-11-14T11:00:00.000Z", { acertoGabaritoPct: 80, acertosGabarito: 4, totalComGabarito: 5, issues: { criadas: 0, atualizadas: 3, reabertas: 0 } }),
+      resumo("3", "2026-11-13T11:00:00.000Z", { acertoGabaritoPct: 60, acertosGabarito: 3, totalComGabarito: 5, issues: { criadas: 1, atualizadas: 2, reabertas: 1 } }),
     ]);
     expect(indice.execucoes.map((e: any) => e.id)).toEqual(["2", "3", "1"]);
     expect(indice.totais.execucoes).toBe(3);
     expect(indice.totais.falhasTriadas).toBe(12);
-    expect(indice.totais.acertoMedioPct).toBe(80);
+    // acerto somado sobre todas as falhas com gabarito: 11 de 14
+    expect(indice.totais.acertoMedioPct).toBe(79);
     expect(indice.totais.custoTotalUsd).toBeCloseTo(0.3);
-    expect(indice.totais.horasEconomizadas).toBeCloseTo((119.8 * 3) / 60);
+    // as mesmas 4 falhas nas 3 execuções contam 30 min uma vez só; o tempo da automação soma tudo
+    expect(indice.totais.falhasDistintas).toBe(4);
+    expect(indice.totais.horasEconomizadas).toBeCloseTo((4 * 30 - 3 * 0.2) / 60);
+    expect(indice.totais.custoIncompleto).toBe(false);
     expect(indice.totais.issuesAbertas).toBe(4);
   });
 
@@ -74,7 +79,7 @@ describe("publicarHistorico", () => {
   test("execução sem falhas entra com acerto null e não derruba a média", () => {
     const { indice } = preparar([
       resumo("1", "2026-11-12T11:00:00.000Z", { acertoGabaritoPct: 100 }),
-      resumo("2", "2026-11-13T11:00:00.000Z", { falhas: 0, acertoGabaritoPct: null, resultados: [], minutosManuaisEstimados: 0, minutosEconomizados: 0, custoUsd: 0 }),
+      resumo("2", "2026-11-13T11:00:00.000Z", { falhas: 0, acertoGabaritoPct: null, acertosGabarito: 0, totalComGabarito: 0, idsTriados: [], resultados: [], minutosManuaisEstimados: 0, minutosEconomizados: 0, custoUsd: 0 }),
     ]);
     expect(indice.totais.acertoMedioPct).toBe(100);
     expect(indice.totais.execucoes).toBe(2);

@@ -45,15 +45,15 @@ As falhas são **plantadas de propósito** e a resposta certa está em [`testes/
 
 Os nomes dos testes não entregam a resposta. A IA recebe só o que um QA receberia: erro, stack, código do teste, print e se o teste passou numa nova tentativa.
 
-**Horas economizadas** = falhas triadas × 30 minutos (estimativa minha, rotulada como estimativa na página) − tempo real gasto pela automação.
+**Horas economizadas** = falhas *diferentes* triadas × 30 minutos (estimativa minha, rotulada como estimativa na página; uma falha que se repete em vários dias conta uma vez) − todo o tempo gasto pela automação. **Acerto** = falhas com a categoria certa ÷ todas as falhas do gabarito, somando as execuções. Quando o provedor de IA falha (por exemplo, sobrecarregado), a falha conta como erro, nunca como acerto.
 
 ## Como usar na sua empresa
 
 O fluxo não depende do SauceDemo. Ele recebe qualquer relatório **JSON do Playwright** ou **JUnit XML** (Cypress, Selenium, Rest Assured, pytest e quase toda ferramenta geram JUnit).
 
-1. Copie para o seu repositório as pastas `n8n/`, `scripts/`, `src/`, `prompts/` e o arquivo [`exemplos/usar-na-sua-empresa.yml`](exemplos/usar-na-sua-empresa.yml) para `.github/workflows/`.
+1. Copie para o seu repositório as pastas `n8n/`, `scripts/`, `src/`, `prompts/`, os arquivos `package.json`, `package-lock.json` e `tsconfig.json`, e o arquivo [`exemplos/usar-na-sua-empresa.yml`](exemplos/usar-na-sua-empresa.yml) para `.github/workflows/`.
 2. Troque no workflow o passo de testes pelo da sua suíte e aponte `--relatorio` para o arquivo que ela gera.
-3. Crie o segredo `GEMINI_API_KEY` (gratuito, em [aistudio.google.com/apikey](https://aistudio.google.com/apikey)) ou `ANTHROPIC_API_KEY` com a variável `MODELO_IA` igual a um modelo `claude-...`.
+3. Crie o segredo `GEMINI_API_KEY` (em [aistudio.google.com/apikey](https://aistudio.google.com/apikey)) ou `ANTHROPIC_API_KEY` com a variável `MODELO_IA` igual a um modelo `claude-...`. No nível gratuito do Gemini, o Google pode usar o conteúdo enviado para melhorar os produtos dele: com logs e prints de sistemas internos, use uma conta paga ou o Claude.
 4. Ajuste o prompt em [`prompts/triagem.md`](prompts/triagem.md) com o jeito de trabalhar do seu time.
 
 Se a empresa já tem um n8n hospedado, importe `n8n/fluxo.json` nele e use `N8N_URL` apontando para ele. Nesse caso, prefira as credenciais do próprio n8n em vez de variáveis de ambiente.
@@ -65,6 +65,8 @@ Se a empresa já tem um n8n hospedado, importe `n8n/fluxo.json` nele e use `N8N_
 | `GEMINI_API_KEY` | segredo | | chave do Gemini |
 | `ANTHROPIC_API_KEY` | segredo | | chave do Claude (opcional) |
 | `MODELO_IA` | variável | `gemini-3.5-flash-lite` | modelo usado; `claude-*` usa o Claude |
+| `ISSUE_PREFIXO_TITULO` | variável de ambiente | vazio | texto no início do título das issues |
+| `ISSUE_RODAPE` | variável de ambiente | vazio | texto extra no fim de cada issue |
 | `LIMITE_CATALOGO_MS` | variável | `5165` | calibra o teste instável da demonstração |
 
 ## Rodar localmente
@@ -89,8 +91,8 @@ npm run n8n:local        # abre o fluxo no editor do n8n em http://localhost:567
 
 ## Como foi testado
 
-- 68 testes unitários (leitura de relatórios, impressão digital da falha, chamadas às duas IAs, tratamento de recusa, JSON inválido, erro 503 e cota, decisão das issues, métricas e histórico)
-- 6 testes de integração que sobem um n8n de verdade com servidores falsos: criar, não duplicar, reabrir, erro isolado, troca de provedor e nova tentativa quando a IA está ocupada
+- 76 testes unitários (leitura de relatórios, impressão digital da falha, chamadas às duas IAs, tratamento de recusa, JSON inválido, erro 503 e cota, decisão das issues, menções neutralizadas, métricas e histórico)
+- 8 testes de integração que sobem um n8n de verdade com servidores falsos: criar, não duplicar, reabrir, erro isolado, troca de provedor, nova tentativa por falha quando a IA está ocupada e nenhuma issue criada quando a listagem do GitHub falha
 
 ---
 

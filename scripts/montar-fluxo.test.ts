@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+import fs from "node:fs";
 import path from "node:path";
 import { montarFluxo } from "./montar-fluxo";
 
@@ -39,5 +40,10 @@ describe("montarFluxo", () => {
 
   test("nenhuma chave de API no fluxo gerado", () => {
     expect(texto).not.toMatch(/sk-ant-|ghp_|gho_|github_pat_/);
+  });
+
+  test("o n8n/fluxo.json versionado está sincronizado com o código", () => {
+    const versionado = JSON.parse(fs.readFileSync(path.join(RAIZ, "n8n/fluxo.json"), "utf8"));
+    expect(versionado).toEqual(fluxo);
   });
 });

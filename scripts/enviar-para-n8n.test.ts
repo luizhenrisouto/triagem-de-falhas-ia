@@ -13,6 +13,8 @@ const ENV = {
   GITHUB_REPOSITORY: "dono/repo",
   GITHUB_SHA: "abc123",
   MODELO_IA: "claude-opus-5-5",
+  ISSUE_PREFIXO_TITULO: "[SauceDemo] ",
+  ISSUE_RODAPE: "Falha plantada.",
 };
 
 const saida = () => path.join(fs.mkdtempSync(path.join(os.tmpdir(), "envio-")), "resumo.json");
@@ -35,6 +37,7 @@ describe("executarEnvio", () => {
     expect(corpo.execucao.id).toBe("99");
     expect(corpo.execucao.url).toBe("https://github.com/dono/repo/actions/runs/99");
     expect(corpo.falhas).toHaveLength(5);
+    expect(corpo.issue).toEqual({ prefixoTitulo: "[SauceDemo] ", rodape: "Falha plantada." });
     expect(resumo.totalTestes).toBe(9);
     expect(resumo.aprovados).toBe(4);
     expect(JSON.parse(fs.readFileSync(destino, "utf8")).id).toBe("99");
@@ -51,12 +54,26 @@ describe("executarEnvio", () => {
     expect(resumo.aprovados).toBe(9);
   });
 
-  test("n8n fora do ar: grava resumo sem resultados e lança erro", async () => {
+  test("n8n fora do ar: grava as falhas como sem triagem e lança erro", async () => {
     const destino = saida();
     const falhar = (async () => {
       throw new Error("ECONNREFUSED");
     }) as any;
     await expect(executarEnvio({ relatorio: FIXTURE, saida: destino, raiz: RAIZ, env: ENV, fetchFn: falhar })).rejects.toThrow(/n8n/);
-    expect(JSON.parse(fs.readFileSync(destino, "utf8")).resultados).toEqual([]);
+    const resumo = JSON.parse(fs.readFileSync(destino, "utf8"));
+    // as falhas continuam aparecendo, como "sem triagem", em vez de uma execução falsamente verde
+    expect(resumo.falhas).toBe(5);
+    expect(resumo.resultados).toHaveLength(5);
+    expect(resumo.resultados.every((r: any) => r.triagem === null && /n8n/.test(r.erroTriagem) && r.acaoIssue === "nenhuma")).toBe(true);
+    expect(resumo.acertoGabaritoPct).toBe(0);
+  });
+
+  test("JUnit sem totais na raiz soma as suítes", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "envio-"));
+    const xml = path.join(dir, "r.xml");
+    fs.writeFileSync(xml, '<testsuites><testsuite name="a" tests="3" failures="1" errors="0" skipped="0"><testcase name="t1" classname="a"><failure message="x">x</failure></testcase><testcase name="t2" classname="a"/><testcase name="t3" classname="a"/></testsuite><testsuite name="b" tests="2" failures="0" errors="1" skipped="0"><testcase name="t4" classname="b"><error message="y">y</error></testcase><testcase name="t5" classname="b"/></testsuite></testsuites>');
+    const resumo = await executarEnvio({ relatorio: xml, saida: saida(), raiz: RAIZ, env: ENV, fetchFn: (async () => new Response(JSON.stringify({ resultados: [] }))) as any });
+    expect(resumo.totalTestes).toBe(5);
+    expect(resumo.aprovados).toBe(3);
   });
 });

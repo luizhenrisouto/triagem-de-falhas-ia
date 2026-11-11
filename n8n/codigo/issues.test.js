@@ -14,6 +14,7 @@ const t = {
   sugestaoCorrecao: "Verificar o handler do botão",
 };
 const execucao = { id: "42", url: "https://github.com/o/r/actions/runs/42", data: "2026-11-12" };
+const demo = { prefixoTitulo: "[SauceDemo] ", rodape: "Esta falha foi plantada de propósito na demonstração." };
 
 describe("decidirAcaoIssue", () => {
   test("teste_instavel nunca gera issue", () => {
@@ -41,6 +42,12 @@ describe("decidirAcaoIssue", () => {
     ];
     expect(decidirAcaoIssue(f, t, ex)).toEqual({ acao: "atualizar", numero: 12 });
   });
+  test("se a listagem de issues falhou, não cria nada (evita duplicar) e explica", () => {
+    const r = decidirAcaoIssue(f, t, [], { listagemFalhou: true });
+    expect(r.acao).toBe("nenhuma");
+    expect(r.numero).toBeNull();
+    expect(r.erro).toMatch(/listar as issues/);
+  });
   test("corpo nulo nas issues existentes não quebra", () => {
     expect(decidirAcaoIssue(f, t, [{ number: 1, state: "open", body: null }]).acao).toBe("criar");
   });
@@ -48,7 +55,7 @@ describe("decidirAcaoIssue", () => {
 
 describe("renderizarIssue", () => {
   test("título, marcadores, contador, última ocorrência e rótulos", () => {
-    const { titulo, corpo, rotulos } = renderizarIssue(f, t, execucao, 2);
+    const { titulo, corpo, rotulos } = renderizarIssue(f, t, execucao, 2, demo);
     expect(titulo).toBe("[SauceDemo] Botão Finalizar não conclui o pedido");
     expect(corpo).toContain(`<!-- triagem-ia:fp=${f.id} -->`);
     expect(corpo).toContain("<!-- triagem-ia:ocorrencias=3 -->");
@@ -62,14 +69,28 @@ describe("renderizarIssue", () => {
   });
 
   test("primeira ocorrência conta 1", () => {
-    expect(lerOcorrencias(renderizarIssue(f, t, execucao, 0).corpo)).toBe(1);
+    expect(lerOcorrencias(renderizarIssue(f, t, execucao, 0, demo).corpo)).toBe(1);
   });
 
   test("teste_quebrado inclui a sugestão de correção do teste", () => {
-    const { corpo, rotulos } = renderizarIssue(f, { ...t, categoria: "teste_quebrado" }, execucao, 0);
+    const { corpo, rotulos } = renderizarIssue(f, { ...t, categoria: "teste_quebrado" }, execucao, 0, demo);
     expect(corpo).toContain("Verificar o handler do botão");
     expect(corpo).toMatch(/Correção sugerida para o teste/);
     expect(rotulos).toEqual(["triagem-ia", "teste_quebrado"]);
+  });
+
+  test("sem opções: sem prefixo no título e sem aviso de demonstração", () => {
+    const { titulo, corpo } = renderizarIssue(f, t, execucao, 0);
+    expect(titulo).toBe("Botão Finalizar não conclui o pedido");
+    expect(corpo).not.toMatch(/plantada/);
+    expect(corpo).toContain("Issue aberta automaticamente pela triagem com IA.");
+  });
+
+  test("@menções escritas pela IA não notificam ninguém", () => {
+    const { titulo, corpo } = renderizarIssue(f, { ...t, resumo: "Falha avisada por @fulano", causaProvavel: "ver @time/qa" }, execucao, 0);
+    expect(titulo).not.toMatch(/@fulano/);
+    expect(corpo).not.toMatch(/@time/);
+    expect(titulo).toContain("fulano");
   });
 
   test("lerOcorrencias sem marcador devolve 0", () => {

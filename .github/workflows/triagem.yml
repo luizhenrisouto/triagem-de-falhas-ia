@@ -7,9 +7,7 @@ on:
   schedule:
     - cron: "0 11 * * *" # 08:00 em Brasília
 
-permissions:
-  contents: write
-  issues: write
+permissions: {}
 
 concurrency:
   group: triagem
@@ -19,12 +17,20 @@ jobs:
   triagem:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # Este job roda o n8n e tem as chaves da IA: só pode ler o código e mexer em issues.
+    permissions:
+      contents: read
+      issues: write
     env:
       MODELO_IA: ${{ vars.MODELO_IA || 'gemini-3.5-flash-lite' }}
       LIMITE_CATALOGO_MS: ${{ vars.LIMITE_CATALOGO_MS || '5165' }}
       N8N_URL: http://127.0.0.1:5678
+      ISSUE_PREFIXO_TITULO: "[SauceDemo] "
+      ISSUE_RODAPE: "Esta falha foi plantada de propósito na demonstração (SauceDemo); o gabarito está em `testes/gabarito.json`."
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@v5
         with:
@@ -74,8 +80,8 @@ jobs:
             const linhas = [
               "## Triagem com IA",
               "",
-              `Testes: ${r.totalTestes} · aprovados: ${r.aprovados} · falhas: ${r.falhas}`,
-              `Acerto contra o gabarito: ${r.acertoGabaritoPct ?? "-"}% · custo: US$ ${r.custoUsd.toFixed(4)}`,
+              `Modelo: ${r.modelo} · testes: ${r.totalTestes} · aprovados: ${r.aprovados} · falhas: ${r.falhas}`,
+              `Acerto contra o gabarito: ${r.acertoGabaritoPct ?? "-"}% · custo: ${r.custoIncompleto ? "parcial, " : ""}US$ ${r.custoUsd.toFixed(4)}`,
               "",
               "| Teste | Categoria da IA | Issue |",
               "| --- | --- | --- |",
@@ -84,25 +90,13 @@ jobs:
             console.log(linhas.join("\n"));
           ' >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Publicar histórico na branch gh-pages
+      - name: Guardar o resumo para publicação
         if: always() && hashFiles('relatorios/resumo.json') != ''
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          remoto="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          if git ls-remote --exit-code --heads "$remoto" gh-pages > /dev/null; then
-            git clone --depth 1 --branch gh-pages "$remoto" publicacao
-          else
-            mkdir publicacao
-            git -C publicacao init -b gh-pages
-            git -C publicacao remote add origin "$remoto"
-          fi
-          npx tsx scripts/publicar-historico.ts --resumo relatorios/resumo.json --destino publicacao
-          cd publicacao
-          git add -A
-          git -c user.name="triagem-ia[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
-            commit -m "Execução ${GITHUB_RUN_ID}" || exit 0
-          git push origin gh-pages
+        uses: actions/upload-artifact@v5
+        with:
+          name: resumo
+          path: relatorios/resumo.json
+          retention-days: 7
 
       - name: Guardar prints, traces e log do n8n
         if: always()
@@ -115,3 +109,54 @@ jobs:
             n8n.log
           retention-days: 7
           if-no-files-found: ignore
+
+  publicar:
+    needs: triagem
+    if: always() && needs.triagem.result != 'cancelled'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Só este job escreve no repositório (branch gh-pages), sem chaves de IA nem n8n.
+    permissions:
+      contents: write
+    steps:
+      - name: Baixar o resumo
+        id: resumo
+        continue-on-error: true
+        uses: actions/download-artifact@v5
+        with:
+          name: resumo
+          path: relatorios
+
+      - uses: actions/checkout@v5
+        if: steps.resumo.outcome == 'success'
+        with:
+          path: codigo
+          persist-credentials: false
+
+      - uses: actions/setup-node@v5
+        if: steps.resumo.outcome == 'success'
+        with:
+          node-version-file: codigo/.nvmrc
+          cache: npm
+          cache-dependency-path: codigo/package-lock.json
+
+      - name: Publicar histórico na branch gh-pages
+        if: steps.resumo.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          npm ci --prefix codigo
+          remoto="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git ls-remote --exit-code --heads "$remoto" gh-pages > /dev/null; then
+            git clone --depth 1 --branch gh-pages "$remoto" publicacao
+          else
+            mkdir publicacao
+            git -C publicacao init -b gh-pages
+            git -C publicacao remote add origin "$remoto"
+          fi
+          (cd codigo && npx tsx scripts/publicar-historico.ts --resumo ../relatorios/resumo.json --destino ../publicacao)
+          cd publicacao
+          git add -A
+          git -c user.name="triagem-ia[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -m "Execução ${GITHUB_RUN_ID}" || exit 0
+          git push origin gh-pages

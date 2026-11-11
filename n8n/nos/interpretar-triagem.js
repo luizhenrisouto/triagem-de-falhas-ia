@@ -12,5 +12,5 @@ return preparados.map((p, i) => {
   const interpretar = p.json.provedor === "gemini" ? interpretarRespostaGemini : interpretarRespostaClaude;
   const inicioMedio = fimMs - (fimMs - p.json.inicioMs) / n;
   const interpretacao = interpretar(resposta, { modelo, inicioMs: Math.round(inicioMedio), fimMs });
-  return { json: { falha: p.json.falha, contexto: p.json.contexto, issuesExistentes: p.json.issuesExistentes, ...interpretacao } };
+  return { json: { falha: p.json.falha, contexto: p.json.contexto, issuesExistentes: p.json.issuesExistentes, listagemFalhou: p.json.listagemFalhou, ...interpretacao } };
 });

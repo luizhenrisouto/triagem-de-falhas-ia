@@ -1,7 +1,7 @@
 {
   "name": "triagem-de-falhas-ia",
   "version": "1.0.0",
-  "description": "Triagem de falhas de teste com IA (n8n + Claude)",
+  "description": "Triagem de falhas de teste com IA (n8n + Gemini ou Claude)",
   "directories": {
     "doc": "docs"
   },

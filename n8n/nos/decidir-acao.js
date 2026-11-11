@@ -1,12 +1,12 @@
 // Nó "Decidir ação" (uma vez para todos os itens): criar, atualizar, reabrir ou nenhuma.
 return $input.all().map((item) => {
   const d = item.json;
-  const { acao, numero } = decidirAcaoIssue(d.falha, d.triagem, d.issuesExistentes);
+  const { acao, numero, erro } = decidirAcaoIssue(d.falha, d.triagem, d.issuesExistentes, { listagemFalhou: d.listagemFalhou });
   let issue = null;
   if (acao !== "nenhuma") {
     const existente = d.issuesExistentes.find((i) => i.number === numero);
-    issue = renderizarIssue(d.falha, d.triagem, d.contexto.execucao, lerOcorrencias(existente?.body));
+    issue = renderizarIssue(d.falha, d.triagem, d.contexto.execucao, lerOcorrencias(existente?.body), d.contexto.issue);
   }
-  const { issuesExistentes, ...resto } = d;
-  return { json: { ...resto, acao, numero, issue } };
+  const { issuesExistentes, listagemFalhou, ...resto } = d;
+  return { json: { ...resto, acao, numero, issue, erroIssue: erro ?? null } };
 });

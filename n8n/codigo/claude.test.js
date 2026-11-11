@@ -127,6 +127,13 @@ describe("custoUsd", () => {
     expect(custoUsd("claude-opus-5-5", 1e6, 1e6)).toBeCloseTo(24);
     expect(custoUsd("claude-haiku-5-5", 1e6, 1e6)).toBeCloseTo(0.6);
   });
+  test("Sonnet 5.5 e Fable 5.2, que a requisição já aceita", () => {
+    expect(custoUsd("claude-sonnet-5-5", 1e6, 1e6)).toBeCloseTo(12);
+    expect(custoUsd("claude-fable-5-2", 1e6, 1e6)).toBeCloseTo(48);
+  });
+  test("modelo sem preço: a triagem traz custo null, não zero", () => {
+    expect(interpretarRespostaClaude(respostaOk, { ...ctx, modelo: "claude-desconhecido" }).custoUsd).toBeNull();
+  });
   test("modelo desconhecido devolve null", () => {
     expect(custoUsd("outro", 1, 1)).toBeNull();
   });

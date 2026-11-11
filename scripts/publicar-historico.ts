@@ -4,7 +4,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import type { ResumoExecucao } from "../src/metricas/tipos";
+import { MINUTOS_MANUAIS_POR_FALHA, type ResumoExecucao } from "../src/metricas/tipos";
 
 type ExecucaoNoIndice = Omit<ResumoExecucao, "resultados">;
 export type Indice = {
@@ -12,8 +12,10 @@ export type Indice = {
   totais: {
     execucoes: number;
     falhasTriadas: number;
+    falhasDistintas: number;
     acertoMedioPct: number | null;
     custoTotalUsd: number;
+    custoIncompleto: boolean;
     horasEconomizadas: number;
     issuesAbertas: number;
   };
@@ -21,16 +23,20 @@ export type Indice = {
 };
 
 function calcularTotais(execucoes: ExecucaoNoIndice[]): Indice["totais"] {
-  const comAcerto = execucoes.filter((e) => e.acertoGabaritoPct !== null);
   const soma = (f: (e: ExecucaoNoIndice) => number) => execucoes.reduce((s, e) => s + f(e), 0);
+  const acertos = soma((e) => e.acertosGabarito ?? 0);
+  const comGabarito = soma((e) => e.totalComGabarito ?? 0);
+  // Uma falha que se repete em vários dias é triada à mão uma vez: os 30 min contam uma vez por falha distinta.
+  const distintas = new Set(execucoes.flatMap((e) => e.idsTriados ?? [])).size;
+  const minutosAutomacao = soma((e) => e.minutosManuaisEstimados - e.minutosEconomizados);
   return {
     execucoes: execucoes.length,
     falhasTriadas: soma((e) => Object.values(e.porCategoria).reduce((a, b) => a + b, 0)),
-    acertoMedioPct: comAcerto.length
-      ? Math.round(comAcerto.reduce((s, e) => s + (e.acertoGabaritoPct ?? 0), 0) / comAcerto.length)
-      : null,
+    falhasDistintas: distintas,
+    acertoMedioPct: comGabarito ? Math.round((acertos / comGabarito) * 100) : null,
     custoTotalUsd: soma((e) => e.custoUsd),
-    horasEconomizadas: soma((e) => e.minutosEconomizados) / 60,
+    custoIncompleto: execucoes.some((e) => e.custoIncompleto),
+    horasEconomizadas: (distintas * MINUTOS_MANUAIS_POR_FALHA - minutosAutomacao) / 60,
     issuesAbertas: soma((e) => e.issues.criadas),
   };
 }

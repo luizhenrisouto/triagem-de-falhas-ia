@@ -22,7 +22,8 @@ export type ResultadoTriagem = {
   erroIssue: string | null;
   tokensEntrada: number;
   tokensSaida: number;
-  custoUsd: number;
+  /** null quando o modelo não tem preço conhecido. */
+  custoUsd: number | null;
   duracaoTriagemMs: number;
 };
 
@@ -40,8 +41,14 @@ export type ResumoExecucao = {
   falhas: number;
   porCategoria: Record<Categoria, number>;
   acertoGabaritoPct: number | null;
+  acertosGabarito: number;
+  totalComGabarito: number;
+  /** Impressões digitais das falhas triadas nesta execução (para contar falhas distintas no histórico). */
+  idsTriados: string[];
   duracaoMediaTriagemMs: number | null;
   custoUsd: number;
+  /** Algum resultado veio sem preço conhecido: o custo mostrado é parcial. */
+  custoIncompleto: boolean;
   minutosManuaisEstimados: number;
   minutosEconomizados: number;
   issues: { criadas: number; atualizadas: number; reabertas: number };

@@ -18,7 +18,7 @@ function interpretarRespostaClaude(respostaHttp, { modelo, inicioMs, fimMs }) {
     erroTriagem: null,
     tokensEntrada,
     tokensSaida,
-    custoUsd: _depsClaude.custoUsd(modelo, tokensEntrada, tokensSaida) ?? 0,
+    custoUsd: _depsClaude.custoUsd(modelo, tokensEntrada, tokensSaida), // null = modelo sem preço conhecido
     duracaoTriagemMs: fimMs - inicioMs,
   };
   const falhou = (motivo) => ({ ...base, erroTriagem: motivo });

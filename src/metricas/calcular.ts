@@ -32,8 +32,12 @@ export function calcularResumo(entrada: {
       teste_quebrado: contar((r) => r.triagem?.categoria === "teste_quebrado"),
     },
     acertoGabaritoPct: comGabarito.length ? Math.round((acertos / comGabarito.length) * 100) : null,
+    acertosGabarito: acertos,
+    totalComGabarito: comGabarito.length,
+    idsTriados: triados.map((r) => r.falhaId),
     duracaoMediaTriagemMs: triados.length ? Math.round(tempoTriadosMs / triados.length) : null,
-    custoUsd: resultados.reduce((s, r) => s + (r.custoUsd || 0), 0),
+    custoUsd: resultados.reduce((s, r) => s + (r.custoUsd ?? 0), 0),
+    custoIncompleto: resultados.some((r) => r.custoUsd === null),
     minutosManuaisEstimados,
     minutosEconomizados: minutosManuaisEstimados - tempoTriadosMs / 60_000,
     issues: {

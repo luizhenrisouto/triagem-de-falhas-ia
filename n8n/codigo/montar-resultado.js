@@ -6,7 +6,7 @@
 function montarResultado(decisao, acaoRealizada, respostaGithub) {
   let acaoIssue = acaoRealizada;
   let issueUrl = null;
-  let erroIssue = null;
+  let erroIssue = decisao.erroIssue ?? null;
   if (acaoRealizada !== "nenhuma") {
     if (respostaGithub && respostaGithub.html_url) {
       issueUrl = respostaGithub.html_url;

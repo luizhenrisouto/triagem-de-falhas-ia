@@ -35,6 +35,7 @@ let gemini: Duble;
 let github: Duble;
 let n8n: N8nRodando;
 let issues: any[] = [];
+let listagemQuebrada = false;
 
 const enviar = async (falhas = FALHAS, modelo = "claude-opus-5-5") => {
   const r = await fetch(`${n8n.url}/webhook/triagem`, {
@@ -57,7 +58,7 @@ beforeAll(async () => {
     };
   });
   github = await criarDuble((c) => {
-    if (c.metodo === "GET") return { status: 200, corpo: issues };
+    if (c.metodo === "GET") return listagemQuebrada ? { status: 500, corpo: { message: "Server Error" } } : { status: 200, corpo: issues };
     if (c.metodo === "POST" && c.caminho.endsWith("/issues")) {
       const nova = { number: issues.length + 1, state: "open", body: c.corpo.body, html_url: `https://github.com/${REPO}/issues/${issues.length + 1}` };
       issues.push(nova);
@@ -73,7 +74,7 @@ beforeAll(async () => {
   });
   n8n = await subirN8n({
     porta: PORTA,
-    env: { CLAUDE_URL_BASE: claude.url, GEMINI_URL_BASE: gemini.url, GITHUB_URL_BASE: github.url, ANTHROPIC_API_KEY: "chave-falsa", GEMINI_API_KEY: "chave-gemini-falsa", GITHUB_TOKEN: "token-falso" },
+    env: { CLAUDE_URL_BASE: claude.url, GEMINI_URL_BASE: gemini.url, GITHUB_URL_BASE: github.url, ANTHROPIC_API_KEY: "chave-falsa", GEMINI_API_KEY: "chave-gemini-falsa", GITHUB_TOKEN: "token-falso", PAUSA_GEMINI_S: "0" },
   });
 }, 300_000);
 
@@ -149,5 +150,33 @@ describe("fluxo n8n", () => {
     expect(tentativas).toBe(2);
     expect(resultados[0].erroTriagem).toBeNull();
     expect(resultados[0].triagem.categoria).toBe("teste_instavel");
+  }, 120_000);
+
+  test("503 só na segunda falha também é tentado de novo, sem reenviar a primeira", async () => {
+    const chamadasPorFalha: Record<string, number> = {};
+    gemini.trocarResposta((c) => {
+      const texto: string = c.corpo.contents[0].parts.at(-1).text;
+      const chave = texto.includes("ERRO_INSTAVEL") ? "instavel" : "quebrado";
+      chamadasPorFalha[chave] = (chamadasPorFalha[chave] ?? 0) + 1;
+      if (chave === "quebrado" && chamadasPorFalha[chave] === 1) return { status: 503, corpo: { error: { code: 503, status: "UNAVAILABLE", message: "high demand" } } };
+      const categoria = chave === "instavel" ? "teste_instavel" : "teste_quebrado";
+      return { status: 200, corpo: { candidates: [{ content: { parts: [{ text: JSON.stringify(triagem(categoria)) }] }, finishReason: "STOP" }], usageMetadata: { promptTokenCount: 1, candidatesTokenCount: 1 } } };
+    });
+    const { resultados } = await enviar([FALHAS[1], FALHAS[2]], "gemini-3.8-flash");
+    expect(chamadasPorFalha).toEqual({ instavel: 1, quebrado: 2 });
+    expect(resultados.every((r) => r.erroTriagem === null)).toBe(true);
+  }, 180_000);
+
+  test("listagem de issues com erro: não cria issue (evita duplicar) e registra o motivo", async () => {
+    listagemQuebrada = true;
+    const antes = issues.length;
+    try {
+      const { resultados } = await enviar([falha("eeeeeeeeeeee", "x.spec.ts > A > bug novo", "ERRO_BUG")]);
+      expect(issues.length).toBe(antes);
+      expect(resultados[0].acaoIssue).toBe("nenhuma");
+      expect(resultados[0].erroIssue).toMatch(/listar as issues/);
+    } finally {
+      listagemQuebrada = false;
+    }
   }, 120_000);
 });

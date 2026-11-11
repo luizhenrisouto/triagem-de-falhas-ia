@@ -43,6 +43,11 @@ describe("montarResultado", () => {
     expect(r.erroIssue).toContain("Bad credentials");
   });
 
+  test("erro decidido antes (ex.: listagem falhou) aparece em erroIssue", () => {
+    const r = montarResultado({ ...decisao, erroIssue: "Não foi possível listar as issues" }, "nenhuma", null);
+    expect(r.erroIssue).toBe("Não foi possível listar as issues");
+  });
+
   test("print não volta no resultado", () => {
     const r = montarResultado({ ...decisao, falha: { ...decisao.falha, printBase64: "AAAA" } }, "nenhuma", null);
     expect(JSON.stringify(r)).not.toContain("AAAA");

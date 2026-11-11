@@ -31,6 +31,9 @@ describe("calcularResumo", () => {
     const gab = Object.fromEntries(Object.entries(gabarito).map(([k, v], i) => [rs[i].titulo, v]));
     const r = calcularResumo({ ...base, resultados: rs, gabarito: gab });
     expect(r.acertoGabaritoPct).toBe(75);
+    expect(r.acertosGabarito).toBe(3);
+    expect(r.totalComGabarito).toBe(4);
+    expect(r.idsTriados).toEqual(rs.map((x) => x.falhaId));
   });
 
   test("falha com erroTriagem conta como erro, não como acerto", () => {
@@ -63,6 +66,13 @@ describe("calcularResumo", () => {
     expect(r.acertoGabaritoPct).toBeNull();
     expect(r.id).toBe("7");
     expect(r.data).toBe(execucao.dataIso);
+  });
+
+  test("custo desconhecido de algum resultado marca o custo como incompleto", () => {
+    const r = calcularResumo({ ...base, resultados: [resultado("bug_produto", { custoUsd: null as any }), resultado("bug_produto", { custoUsd: 0.02 })] });
+    expect(r.custoUsd).toBeCloseTo(0.02);
+    expect(r.custoIncompleto).toBe(true);
+    expect(calcularResumo({ ...base, resultados: [resultado("bug_produto")] }).custoIncompleto).toBe(false);
   });
 
   test("sem falhas: zeros e nulos", () => {

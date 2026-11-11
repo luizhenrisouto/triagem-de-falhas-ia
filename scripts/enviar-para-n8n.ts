@@ -2,7 +2,7 @@
  * Lê o relatório de testes, envia as falhas ao webhook do n8n e grava o resumo da execução.
  * Uso: npx tsx scripts/enviar-para-n8n.ts --relatorio relatorios/resultado.json --saida relatorios/resumo.json
  * Aceita o JSON do Playwright ou um JUnit XML (extensão .xml).
- * Variáveis: N8N_URL, MODELO_IA (padrão gemini-3.5-flash-lite; claude-* usa o Claude), GITHUB_RUN_ID, GITHUB_SERVER_URL, GITHUB_REPOSITORY, GITHUB_SHA.
+ * Variáveis: N8N_URL, ISSUE_PREFIXO_TITULO, ISSUE_RODAPE, MODELO_IA (padrão gemini-3.5-flash-lite; claude-* usa o Claude), GITHUB_RUN_ID, GITHUB_SERVER_URL, GITHUB_REPOSITORY, GITHUB_SHA.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -25,9 +25,13 @@ const LIMITE_ENVIO_MS = 10 * 60 * 1000;
 function contarTestes(relatorio: string): { totalTestes: number; aprovados: number } {
   if (relatorio.endsWith(".xml")) {
     const xml = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: "" }).parse(fs.readFileSync(relatorio, "utf8"));
-    const raiz = xml.testsuites ?? xml.testsuite ?? {};
-    const total = Number(raiz.tests ?? 0);
-    return { totalTestes: total, aprovados: total - Number(raiz.failures ?? 0) - Number(raiz.errors ?? 0) - Number(raiz.skipped ?? 0) };
+    // Muitas ferramentas não põem totais na raiz <testsuites>: soma os atributos de cada <testsuite>.
+    const raiz = xml.testsuites ?? {};
+    const suites = [raiz.testsuite ?? xml.testsuite ?? []].flat();
+    const somar = (attr: string) =>
+      raiz[attr] !== undefined ? Number(raiz[attr]) : suites.reduce((s: number, x: any) => s + Number(x?.[attr] ?? 0), 0);
+    const total = somar("tests");
+    return { totalTestes: total, aprovados: total - somar("failures") - somar("errors") - somar("skipped") };
   }
   const s = JSON.parse(fs.readFileSync(relatorio, "utf8")).stats ?? {};
   const n = (k: string) => Number(s[k] ?? 0);
@@ -72,6 +76,7 @@ export async function executarEnvio(o: Opcoes): Promise<ResumoExecucao> {
         repositorio: o.env.GITHUB_REPOSITORY,
         modelo,
         promptSistema: fs.readFileSync(path.join(o.raiz, "prompts/triagem.md"), "utf8"),
+        issue: { prefixoTitulo: o.env.ISSUE_PREFIXO_TITULO ?? "", rodape: o.env.ISSUE_RODAPE ?? "" },
         falhas,
       }),
       signal: AbortSignal.timeout(LIMITE_ENVIO_MS),
@@ -79,8 +84,24 @@ export async function executarEnvio(o: Opcoes): Promise<ResumoExecucao> {
     if (!resposta.ok) throw new Error(`HTTP ${resposta.status}: ${await resposta.text()}`);
     resultados = ((await resposta.json()) as { resultados: ResultadoTriagem[] }).resultados;
   } catch (e) {
-    gravar([]);
-    throw new Error(`Falha ao enviar para o n8n: ${(e as Error).message}`);
+    const motivo = `Falha ao enviar para o n8n: ${(e as Error).message}`;
+    // Registra as falhas como "sem triagem": a execução não pode aparecer como se tudo tivesse passado.
+    gravar(
+      falhas.map((f) => ({
+        falhaId: f.id,
+        titulo: f.titulo,
+        triagem: null,
+        erroTriagem: motivo,
+        acaoIssue: "nenhuma" as const,
+        issueUrl: null,
+        erroIssue: null,
+        tokensEntrada: 0,
+        tokensSaida: 0,
+        custoUsd: 0,
+        duracaoTriagemMs: 0,
+      })),
+    );
+    throw new Error(motivo);
   }
   return gravar(resultados);
 }

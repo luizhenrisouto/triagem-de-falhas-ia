@@ -19,7 +19,7 @@ function interpretarRespostaGemini(respostaHttp, { modelo, inicioMs, fimMs }) {
     erroTriagem: null,
     tokensEntrada,
     tokensSaida,
-    custoUsd: _depsGemini.custoUsd(modelo, tokensEntrada, tokensSaida) ?? 0,
+    custoUsd: _depsGemini.custoUsd(modelo, tokensEntrada, tokensSaida), // null = modelo sem preço conhecido
     duracaoTriagemMs: fimMs - inicioMs,
   };
   const falhou = (motivo) => ({ ...base, erroTriagem: motivo });

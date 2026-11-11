@@ -33,8 +33,14 @@ function frase(totais) {
   const horas = totais.horasEconomizadas;
   h1.append(`Em ${execs}, a IA triou `, n(`${num(totais.falhasTriadas)} falhas`));
   if (totais.acertoMedioPct !== null) h1.append(" e acertou ", n(`${num(totais.acertoMedioPct)}%`), " das categorias");
-  h1.append(horas >= 1 ? ` — cerca de ` : ".", horas >= 1 ? n(`${num(horas, horas < 10 ? 1 : 0)} horas`) : "", horas >= 1 ? " de triagem manual." : "");
-  sub.textContent = `Custo total da IA: US$ ${num(totais.custoTotalUsd, 2)}. ${num(totais.issuesAbertas)} issues abertas, sem repetir a mesma falha.`;
+  if (horas >= 1) h1.append(" — cerca de ", n(`${num(horas, horas < 10 ? 1 : 0)} horas`), " de triagem manual.");
+  else h1.append(".");
+  const custo = `${totais.custoIncompleto ? "pelo menos " : ""}US$ ${num(totais.custoTotalUsd, 2)}`;
+  const distintas = totais.falhasDistintas ?? totais.falhasTriadas;
+  sub.textContent =
+    `${num(distintas)} ${distintas === 1 ? "falha diferente" : "falhas diferentes"}; ` +
+    `${num(totais.issuesAbertas)} ${totais.issuesAbertas === 1 ? "issue aberta" : "issues abertas"}, sem repetir a mesma falha. ` +
+    `Custo total da IA: ${custo}.`;
 }
 
 function faixa(exec) {
