@@ -33,6 +33,8 @@ test.describe("Catálogo", () => {
     const inicio = Date.now();
     await page.getByTestId("login-button").click();
     await expect(page.getByTestId("inventory-list")).toBeVisible({ timeout: 15_000 });
-    expect(Date.now() - inicio, `catálogo deve abrir em menos de ${limiteMs} ms`).toBeLessThan(limiteMs);
+    const tempoMs = Date.now() - inicio;
+    test.info().annotations.push({ type: "tempo-catalogo-ms", description: String(tempoMs) });
+    expect(tempoMs, `catálogo deve abrir em menos de ${limiteMs} ms`).toBeLessThan(limiteMs);
   });
 });

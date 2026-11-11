@@ -24,9 +24,9 @@ jobs:
       LIMITE_CATALOGO_MS: ${{ vars.LIMITE_CATALOGO_MS || '5165' }}
       N8N_URL: http://127.0.0.1:5678
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -105,7 +105,7 @@ jobs:
 
       - name: Guardar prints, traces e log do n8n
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: evidencias-${{ github.run_id }}
           path: |
