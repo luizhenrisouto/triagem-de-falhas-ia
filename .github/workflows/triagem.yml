@@ -2,7 +2,7 @@ name: Triagem de falhas com IA
 
 on:
   push:
-    branches: [main, construcao]
+    branches: [main]
   workflow_dispatch:
   schedule:
     - cron: "0 11 * * *" # 08:00 em Brasília
