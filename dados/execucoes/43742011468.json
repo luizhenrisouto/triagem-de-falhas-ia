@@ -1,0 +1,150 @@
+{
+  "id": "43742011468",
+  "data": "2026-11-15T17:37:33.390Z",
+  "url": "https://github.com/luizhenrisouto/triagem-de-falhas-ia/actions/runs/43742011468",
+  "commit": "8d4d82f03f317c9aba8441df9b508f139ca87611",
+  "modelo": "gemini-3.5-flash-lite",
+  "totalTestes": 9,
+  "aprovados": 5,
+  "falhas": 4,
+  "porCategoria": {
+    "bug_produto": 3,
+    "teste_instavel": 0,
+    "teste_quebrado": 1
+  },
+  "acertoGabaritoPct": 100,
+  "acertosGabarito": 4,
+  "totalComGabarito": 4,
+  "idsTriados": [
+    "5a048fa577ca",
+    "8728c72772d0",
+    "5eec75cf73c3",
+    "e9aaf5aae52d"
+  ],
+  "duracaoMediaTriagemMs": 18799,
+  "custoUsd": 0,
+  "custoIncompleto": false,
+  "minutosManuaisEstimados": 120,
+  "minutosEconomizados": 118.74673333333334,
+  "issues": {
+    "criadas": 0,
+    "atualizadas": 4,
+    "reabertas": 0
+  },
+  "issueUrls": [
+    "https://github.com/luizhenrisouto/triagem-de-falhas-ia/issues/1",
+    "https://github.com/luizhenrisouto/triagem-de-falhas-ia/issues/2",
+    "https://github.com/luizhenrisouto/triagem-de-falhas-ia/issues/4",
+    "https://github.com/luizhenrisouto/triagem-de-falhas-ia/issues/3"
+  ],
+  "resultados": [
+    {
+      "falhaId": "5a048fa577ca",
+      "titulo": "carrinho.spec.ts > Carrinho > remover produto esvazia o carrinho",
+      "triagem": {
+        "categoria": "teste_quebrado",
+        "confianca": 0.95,
+        "resumo": "Falha ao tentar remover produto do carrinho devido a seletor incorreto",
+        "passos": [
+          "Abrir a pagina de login",
+          "Entrar com usuario valido",
+          "Adicionar um produto ao carrinho",
+          "Ir para a pagina do carrinho",
+          "Clicar no botao remover"
+        ],
+        "esperado": "O produto e removido do carrinho ao clicar no botao de remocao.",
+        "obtido": "O teste falhou por timeout ao procurar o elemento com o seletor getByTestId('remover-item'), que nao existe na pagina.",
+        "causaProvavel": "O seletor usado no teste ('remover-item') nao corresponde ao atributo data-testid real renderizado na pagina, que exibe um botao com texto 'Remove'.",
+        "sugestaoCorrecao": "Atualizar o seletor no teste para localizar o botao corretamente, por exemplo utilizando page.getByRole('button', { name: 'Remove' }) ou o data-testid correto da aplicacao."
+      },
+      "erroTriagem": null,
+      "acaoIssue": "atualizada",
+      "issueUrl": "https://github.com/luizhenrisouto/triagem-de-falhas-ia/issues/1",
+      "erroIssue": null,
+      "tokensEntrada": 2172,
+      "tokensSaida": 267,
+      "custoUsd": 0,
+      "duracaoTriagemMs": 18799
+    },
+    {
+      "falhaId": "8728c72772d0",
+      "titulo": "catalogo.spec.ts > Catálogo > imagem de cada produto corresponde ao produto",
+      "triagem": {
+        "categoria": "bug_produto",
+        "confianca": 0.95,
+        "resumo": "Imagens de produtos repetidas ou incorretas para o usuário com problema",
+        "passos": [
+          "Abrir a página de login",
+          "Entrar com o usuário problem_user",
+          "Visualizar o catálogo de produtos"
+        ],
+        "esperado": "Cada produto deve possuir uma imagem única e correspondente.",
+        "obtido": "Todas as imagens dos produtos exibem a mesma foto de um cachorro com uma bola.",
+        "causaProvavel": "O usuário problem_user intencionalmente carrega imagens incorretas ou quebradas na aplicação conforme comportamento esperado do ambiente de testes Sauce Labs para este usuário.",
+        "sugestaoCorrecao": "Verificar a lógica de exibição de imagens para o perfil problem_user no código do produto."
+      },
+      "erroTriagem": null,
+      "acaoIssue": "atualizada",
+      "issueUrl": "https://github.com/luizhenrisouto/triagem-de-falhas-ia/issues/2",
+      "erroIssue": null,
+      "tokensEntrada": 2492,
+      "tokensSaida": 206,
+      "custoUsd": 0,
+      "duracaoTriagemMs": 18799
+    },
+    {
+      "falhaId": "5eec75cf73c3",
+      "titulo": "checkout.spec.ts > Checkout > campo sobrenome aceita texto no checkout",
+      "triagem": {
+        "categoria": "bug_produto",
+        "confianca": 0.95,
+        "resumo": "Campo sobrenome nao aceita texto ao usar o usuario problem_user no checkout",
+        "passos": [
+          "Abrir a pagina de login",
+          "Entrar com o usuario problem_user",
+          "Adicionar um produto ao carrinho e ir para o checkout",
+          "Digitar um texto no campo Last Name"
+        ],
+        "esperado": "O campo Last Name deve exibir o texto digitado.",
+        "obtido": "O campo Last Name permanece vazio apos tentar digitar.",
+        "causaProvavel": "O usuario problem_user possui um comportamento conhecido na aplicacao onde campos especificos ignoram o valor digitado, caracterizando um bug de produto.",
+        "sugestaoCorrecao": "O time do produto deve verificar a logica de tratamento de entradas para o usuario problem_user na pagina de checkout."
+      },
+      "erroTriagem": null,
+      "acaoIssue": "atualizada",
+      "issueUrl": "https://github.com/luizhenrisouto/triagem-de-falhas-ia/issues/4",
+      "erroIssue": null,
+      "tokensEntrada": 2588,
+      "tokensSaida": 218,
+      "custoUsd": 0,
+      "duracaoTriagemMs": 18799
+    },
+    {
+      "falhaId": "e9aaf5aae52d",
+      "titulo": "checkout.spec.ts > Checkout > finalizar compra conclui o pedido",
+      "triagem": {
+        "categoria": "bug_produto",
+        "confianca": 0.9,
+        "resumo": "Falha na conclusão do pedido para o usuário error_user",
+        "passos": [
+          "Abrir a aplicação e fazer login com o usuário error_user",
+          "Adicionar um produto ao carrinho e ir para o checkout",
+          "Preencher os dados de envio e continuar",
+          "Clicar no botão Finish"
+        ],
+        "esperado": "A página de confirmação do pedido com a mensagem Thank you for your order! deve ser exibida.",
+        "obtido": "A página permanece na tela de visão geral do checkout sem avançar para a confirmação.",
+        "causaProvavel": "O usuário error_user possui comportamento defeituoso simulado pelo produto ao finalizar a compra, impedindo a navegação para a tela de conclusão.",
+        "sugestaoCorrecao": "Verificar com o time de produto se o comportamento do error_user na finalização do pedido está correto de acordo com a especificação."
+      },
+      "erroTriagem": null,
+      "acaoIssue": "atualizada",
+      "issueUrl": "https://github.com/luizhenrisouto/triagem-de-falhas-ia/issues/3",
+      "erroIssue": null,
+      "tokensEntrada": 2369,
+      "tokensSaida": 239,
+      "custoUsd": 0,
+      "duracaoTriagemMs": 18799
+    }
+  ]
+}
