@@ -1,0 +1,103 @@
+{
+  "id": "45054203721",
+  "data": "2026-11-22T18:19:07.804Z",
+  "url": "https://github.com/luizhenrisouto/triagem-de-falhas-ia/actions/runs/45054203721",
+  "commit": "8d4d82f03f317c9aba8441df9b508f139ca87611",
+  "modelo": "gemini-3.5-flash-lite",
+  "totalTestes": 9,
+  "aprovados": 5,
+  "falhas": 4,
+  "porCategoria": {
+    "bug_produto": 0,
+    "teste_instavel": 0,
+    "teste_quebrado": 1
+  },
+  "acertoGabaritoPct": 25,
+  "acertosGabarito": 1,
+  "totalComGabarito": 4,
+  "idsTriados": [
+    "5a048fa577ca"
+  ],
+  "duracaoMediaTriagemMs": 30707,
+  "custoUsd": 0,
+  "custoIncompleto": false,
+  "minutosManuaisEstimados": 30,
+  "minutosEconomizados": 29.488216666666666,
+  "issues": {
+    "criadas": 0,
+    "atualizadas": 1,
+    "reabertas": 0
+  },
+  "issueUrls": [
+    "https://github.com/luizhenrisouto/triagem-de-falhas-ia/issues/1"
+  ],
+  "resultados": [
+    {
+      "falhaId": "5a048fa577ca",
+      "titulo": "carrinho.spec.ts > Carrinho > remover produto esvazia o carrinho",
+      "triagem": {
+        "categoria": "teste_quebrado",
+        "confianca": 0.95,
+        "resumo": "Falha ao remover produto do carrinho devido a seletor incorreto",
+        "passos": [
+          "Abrir a pagina de login",
+          "Fazer login com um usuario valido",
+          "Adicionar um produto ao carrinho",
+          "Ir para a pagina do carrinho",
+          "Clicar no botao para remover o item"
+        ],
+        "esperado": "O item deve ser removido do carrinho ao clicar no botao de remocao.",
+        "obtido": "O teste falhou por timeout ao tentar encontrar o elemento com o seletor getByTestId('remover-item').",
+        "causaProvavel": "O seletor utilizado no teste ('remover-item') nao corresponde ao atributo de teste real presente na pagina, cujo texto visivel no botao e 'Remove'.",
+        "sugestaoCorrecao": "Atualizar o seletor no teste para utilizar o texto correto do botao ou o test-id adequado fornecido pela aplicacao."
+      },
+      "erroTriagem": null,
+      "acaoIssue": "atualizada",
+      "issueUrl": "https://github.com/luizhenrisouto/triagem-de-falhas-ia/issues/1",
+      "erroIssue": null,
+      "tokensEntrada": 2172,
+      "tokensSaida": 252,
+      "custoUsd": 0,
+      "duracaoTriagemMs": 30707
+    },
+    {
+      "falhaId": "8728c72772d0",
+      "titulo": "catalogo.spec.ts > Catálogo > imagem de cada produto corresponde ao produto",
+      "triagem": null,
+      "erroTriagem": "Erro da API (HTTP 503): UNAVAILABLE - This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.",
+      "acaoIssue": "nenhuma",
+      "issueUrl": null,
+      "erroIssue": null,
+      "tokensEntrada": 0,
+      "tokensSaida": 0,
+      "custoUsd": 0,
+      "duracaoTriagemMs": 30707
+    },
+    {
+      "falhaId": "5eec75cf73c3",
+      "titulo": "checkout.spec.ts > Checkout > campo sobrenome aceita texto no checkout",
+      "triagem": null,
+      "erroTriagem": "Erro da API (HTTP 503): UNAVAILABLE - This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.",
+      "acaoIssue": "nenhuma",
+      "issueUrl": null,
+      "erroIssue": null,
+      "tokensEntrada": 0,
+      "tokensSaida": 0,
+      "custoUsd": 0,
+      "duracaoTriagemMs": 30707
+    },
+    {
+      "falhaId": "e9aaf5aae52d",
+      "titulo": "checkout.spec.ts > Checkout > finalizar compra conclui o pedido",
+      "triagem": null,
+      "erroTriagem": "Erro da API (HTTP 503): UNAVAILABLE - This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.",
+      "acaoIssue": "nenhuma",
+      "issueUrl": null,
+      "erroIssue": null,
+      "tokensEntrada": 0,
+      "tokensSaida": 0,
+      "custoUsd": 0,
+      "duracaoTriagemMs": 30707
+    }
+  ]
+}
