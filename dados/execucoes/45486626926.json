@@ -1,0 +1,135 @@
+{
+  "id": "45486626926",
+  "data": "2026-11-24T21:02:07.163Z",
+  "url": "https://github.com/luizhenrisouto/triagem-de-falhas-ia/actions/runs/45486626926",
+  "commit": "8d4d82f03f317c9aba8441df9b508f139ca87611",
+  "modelo": "gemini-3.5-flash-lite",
+  "totalTestes": 9,
+  "aprovados": 5,
+  "falhas": 4,
+  "porCategoria": {
+    "bug_produto": 3,
+    "teste_instavel": 0,
+    "teste_quebrado": 0
+  },
+  "acertoGabaritoPct": 75,
+  "acertosGabarito": 3,
+  "totalComGabarito": 4,
+  "idsTriados": [
+    "8728c72772d0",
+    "5eec75cf73c3",
+    "e9aaf5aae52d"
+  ],
+  "duracaoMediaTriagemMs": 19464,
+  "custoUsd": 0,
+  "custoIncompleto": false,
+  "minutosManuaisEstimados": 90,
+  "minutosEconomizados": 89.0268,
+  "issues": {
+    "criadas": 0,
+    "atualizadas": 3,
+    "reabertas": 0
+  },
+  "issueUrls": [
+    "https://github.com/luizhenrisouto/triagem-de-falhas-ia/issues/2",
+    "https://github.com/luizhenrisouto/triagem-de-falhas-ia/issues/4",
+    "https://github.com/luizhenrisouto/triagem-de-falhas-ia/issues/3"
+  ],
+  "resultados": [
+    {
+      "falhaId": "8728c72772d0",
+      "titulo": "catalogo.spec.ts > Catálogo > imagem de cada produto corresponde ao produto",
+      "triagem": {
+        "categoria": "bug_produto",
+        "confianca": 0.95,
+        "resumo": "Imagens dos produtos no catálogo são idênticas para todos os itens ao usar problem_user",
+        "passos": [
+          "Acessar a página de login",
+          "Entrar com o usuário problem_user",
+          "Verificar as imagens exibidas no catálogo de produtos"
+        ],
+        "esperado": "Cada produto deve exibir uma imagem única correspondente ao seu item.",
+        "obtido": "Todas as imagens exibidas nos produtos são iguais (foto de um cachorro com uma bola).",
+        "causaProvavel": "O usuário problem_user na aplicação possui um defeito conhecido onde os caminhos ou fontes das imagens dos produtos são substituídos pela mesma imagem genérica.",
+        "sugestaoCorrecao": "O time do produto deve verificar a lógica de carregamento de imagens associada ao perfil problem_user."
+      },
+      "erroTriagem": null,
+      "acaoIssue": "atualizada",
+      "issueUrl": "https://github.com/luizhenrisouto/triagem-de-falhas-ia/issues/2",
+      "erroIssue": null,
+      "tokensEntrada": 2493,
+      "tokensSaida": 218,
+      "custoUsd": 0,
+      "duracaoTriagemMs": 19464
+    },
+    {
+      "falhaId": "5eec75cf73c3",
+      "titulo": "checkout.spec.ts > Checkout > campo sobrenome aceita texto no checkout",
+      "triagem": {
+        "categoria": "bug_produto",
+        "confianca": 0.95,
+        "resumo": "Campo sobrenome nao aceita valor para o usuario problem_user",
+        "passos": [
+          "Abrir a pagina de login",
+          "Fazer login com o usuario problem_user",
+          "Adicionar um produto ao carrinho",
+          "Ir para o checkout",
+          "Digitar texto no campo Sobrenome"
+        ],
+        "esperado": "O campo sobrenome deve exibir o texto digitado.",
+        "obtido": "O campo sobrenome permanece vazio apos a tentativa de preenchimento.",
+        "causaProvavel": "O usuario utilizado no teste e o problem_user, conhecido na aplicacao por injetar falhas propositais em campos especificos, como ignorar o valor inserido no campo de sobrenome.",
+        "sugestaoCorrecao": "Verificar com o time de desenvolvimento o comportamento esperado para o usuario problem_user na pagina de checkout."
+      },
+      "erroTriagem": null,
+      "acaoIssue": "atualizada",
+      "issueUrl": "https://github.com/luizhenrisouto/triagem-de-falhas-ia/issues/4",
+      "erroIssue": null,
+      "tokensEntrada": 2588,
+      "tokensSaida": 231,
+      "custoUsd": 0,
+      "duracaoTriagemMs": 19464
+    },
+    {
+      "falhaId": "e9aaf5aae52d",
+      "titulo": "checkout.spec.ts > Checkout > finalizar compra conclui o pedido",
+      "triagem": {
+        "categoria": "bug_produto",
+        "confianca": 0.9,
+        "resumo": "Falha ao concluir pedido com error_user no checkout",
+        "passos": [
+          "Abrir a pagina de login",
+          "Entrar com o usuario error_user",
+          "Adicionar um produto ao carrinho e ir para o checkout",
+          "Preencher os dados de envio e clicar em continuar",
+          "Clicar no botao Finish"
+        ],
+        "esperado": "A pagina de confirmacao de pedido com a mensagem Thank you for your order! deve ser exibida.",
+        "obtido": "O usuario permanece na pagina de visao geral do checkout e a mensagem de confirmacao nao aparece.",
+        "causaProvavel": "O usuario error_user apresenta comportamento simulado de erro no sistema que impede a conclusao correta do pedido ao clicar em Finish.",
+        "sugestaoCorrecao": "O time do produto deve verificar o comportamento especifico do perfil error_user na etapa de finalizacao de compra."
+      },
+      "erroTriagem": null,
+      "acaoIssue": "atualizada",
+      "issueUrl": "https://github.com/luizhenrisouto/triagem-de-falhas-ia/issues/3",
+      "erroIssue": null,
+      "tokensEntrada": 2369,
+      "tokensSaida": 240,
+      "custoUsd": 0,
+      "duracaoTriagemMs": 19464
+    },
+    {
+      "falhaId": "5a048fa577ca",
+      "titulo": "carrinho.spec.ts > Carrinho > remover produto esvazia o carrinho",
+      "triagem": null,
+      "erroTriagem": "Erro da API (HTTP 503): UNAVAILABLE - This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.",
+      "acaoIssue": "nenhuma",
+      "issueUrl": null,
+      "erroIssue": null,
+      "tokensEntrada": 0,
+      "tokensSaida": 0,
+      "custoUsd": 0,
+      "duracaoTriagemMs": 19464
+    }
+  ]
+}
